@@ -157,11 +157,9 @@ player.addEventListener("error", () => {
 filePicker.addEventListener("change", () => {
   const file = filePicker.files && filePicker.files[0];
   if (!file) return;
-  if (localMediaUrl) URL.revokeObjectURL(localMediaUrl);
-  localMediaUrl = URL.createObjectURL(file);
-  showPlayer(file.name, localMediaUrl, false);
-  // showPlayer resets prior object URLs; retain the selected one for cleanup.
-  localMediaUrl = player.src.startsWith("blob:") ? player.src : null;
+  const selectedUrl = URL.createObjectURL(file);
+  showPlayer(file.name, selectedUrl, false);
+  localMediaUrl = selectedUrl;
   filePicker.value = "";
 });
 document.getElementById("close-player").addEventListener("click", closePlayer);
