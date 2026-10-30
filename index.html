@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d1a">
+  <meta name="description" content="REEL Theater: a fast, controller-friendly media and arcade home screen.">
+  <title>REEL Theater | Home Without the Hassle</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Primary">
+    <a class="brand" href="#home" aria-label="REEL Theater home">
+      <span class="brand-mark" aria-hidden="true">R<span class="brand-dot">•</span></span>
+      <span><strong>REEL</strong><small>THEATER</small></span>
+    </a>
+    <div class="nav-group-title">YOUR SPACE</div>
+    <nav id="primary-nav" class="nav-stack" aria-label="Sections">
+      <button class="nav-link active" data-view="home" aria-current="page"><span class="nav-symbol">⌂</span> Home</button>
+      <button class="nav-link" data-view="watch"><span class="nav-symbol">▷</span> Watch</button>
+      <button class="nav-link" data-view="live"><span class="nav-symbol">◉</span> Live TV</button>
+      <button class="nav-link" data-view="arcade"><span class="nav-symbol">✧</span> Arcade</button>
+      <button class="nav-link" data-view="library"><span class="nav-symbol">▤</span> Library</button>
+      <button class="nav-link" data-view="settings"><span class="nav-symbol">⚙</span> Settings</button>
+    </nav>
+    <div class="side-bottom">
+      <div class="connection-pill"><span class="signal-dot"></span><span>Local-first shell</span></div>
+      <div class="small-muted">REEL Theater <strong>Rung 1</strong><br>Xbox Edge pilot</div>
+    </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <span class="top-label">ENTERTAINMENT, UNCOMPLICATED</span>
+      <div class="top-actions"><span id="controller-status" class="controller-status" aria-live="polite">Keyboard / Remote</span><button class="round-button" data-action="help" aria-label="Show controls">?</button></div>
+    </header>
+    <main id="main-content" tabindex="-1" aria-live="polite"></main>
+    <footer class="footer"><span>Good stories. Open doors.</span><span>Built for the living room · No account required</span></footer>
+  </div>
+</div>
+<div id="player-modal" class="player-modal" role="dialog" aria-label="Media player" aria-modal="true" hidden>
+  <div class="player-box">
+    <div class="player-heading"><strong id="player-title">Now playing</strong><button id="close-player" class="action secondary" type="button">✕ Close</button></div>
+    <video id="media-player" controls playsinline preload="none"></video>
+    <p id="player-note" class="small-muted">Playback depends on the format, the browser, and the source connection.</p>
+  </div>
+</div>
+<input id="local-file" type="file" accept="video/*,audio/*,.mp4,.webm,.mp3,.m4a,.ogg" hidden aria-label="Choose a local media file">
+<div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+</body>
+</html>
