@@ -36,6 +36,7 @@ let currentMode = "desktop";
 let deviceLog = makeDeviceLog();
 let deviceCapture = false;
 let lastDevicePadLabel = "";
+let deviceBackNeedsRelease = false;
 let frameSampleToken = 0;
 let frameSampling = false;
 let playerOpener = null;
@@ -196,7 +197,7 @@ function home() {
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
-    '<div class="feature-card"><div class="tag">Xbox field testing</div><h3>The Shayne Test</h3><p>Check which services and games actually work on your Series X, then download an honest report.</p><button class="action secondary" data-view="field">Open Field Lab</button></div></section>';
+    '<div class="feature-card"><div class="tag">Manual field testing</div><h3>The Shayne Test</h3><p>Record what really works with games and video on this browser.</p><button class="action secondary" data-view="field">Open Field Lab</button></div>'<div class="feature-card"><div class="tag">Device readiness</div><h3>Input &amp; Frame Lab</h3><p>Observe remote, gamepad and touch actions, then measure local UI pacing.</p><button class="action secondary" data-view="device">Open Device Lab</button></div></section>'';
 }
 function playbackHealthSection() {
   return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
@@ -337,6 +338,7 @@ function markDeviceInput(kind,label) {
   updateDeviceLab();
 }
 function startDeviceCapture() {
+  deviceBackNeedsRelease=false;
   deviceLog={...deviceLog,inputs:[]};
   deviceCapture=true;
   lastDevicePadLabel="";
@@ -525,6 +527,10 @@ document.addEventListener("change", event => {
   const indicator = Array.from(document.querySelectorAll("[data-field-indicator]")).find(el=>el.dataset.fieldIndicator===id);
   if (indicator) indicator.textContent = FIELD_STATES.find(state=>state.id===(updated.entries[id]?.status || "untested")).label;
 });
+document.addEventListener("pointerdown",event=>{
+  if(view!=="device" || !deviceCapture || !event.target?.closest?.("#device-capture-target"))return;
+  markDeviceInput(event.pointerType==="touch"?"touch":"pointer",event.pointerType==="touch"?"Tap / touch":"Pointer click");
+});
 document.addEventListener("input", event => {
   if (event.target && event.target.id === "game-query") {
     gameQuery=event.target.value.slice(0,80);
@@ -709,12 +715,16 @@ function gamepadLoop(now) {
     const label=gamepadLabel(intent,pad);
     if(label && label!==lastDevicePadLabel){
       markDeviceInput("gamepad",label);
-      if(label==="B / Back")stopDeviceCapture();
+      if(label==="B / Back"){deviceBackNeedsRelease=true;stopDeviceCapture();}
     }
     lastDevicePadLabel=label||"";
     lastPadAction=""; // Re-arm menu controller after explicit capture stop.
     requestAnimationFrame(gamepadLoop);
     return;
+  }
+  if(deviceBackNeedsRelease){
+    if(pad?.buttons?.[1]?.pressed){requestAnimationFrame(gamepadLoop);return;}
+    deviceBackNeedsRelease=false;
   }
   if(pad) {
     const action=gamepadIntent(pad,{gameFocused:arcadeControlsActive() && modal.hidden});
