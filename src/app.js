@@ -305,7 +305,7 @@ window.addEventListener("hashchange", () => {
   if (views.includes(target) && target !== view) setView(target);
 });
 function spatialFocus(direction) {
-  const elements = Array.from(document.querySelectorAll("#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), .topbar button"))
+  const elements = Array.from(document.querySelectorAll("#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled), main textarea:not(:disabled), .topbar button"))
     .filter(el => el.getClientRects().length > 0);
   if (!elements.length) return;
   const current = document.activeElement;
@@ -323,7 +323,7 @@ function spatialFocus(direction) {
   if (possible[0]) possible[0].el.focus();
 }
 document.addEventListener("keydown", event => {
-  if (event.target && event.target.matches("input")) return;
+  if (event.target && event.target.matches("input, select, textarea")) return;
   if (!modal.hidden) {
     if (event.key === "Escape") { event.preventDefault(); closePlayer(); }
     return;
@@ -356,7 +356,12 @@ function gamepadLoop(now) {
       if (action === "back") { if (!modal.hidden) closePlayer(); else if (view !== "home") setView("home"); }
       else if (action === "select" && modal.hidden) {
         if (view !== "arcade") {
-          if (document.activeElement instanceof HTMLElement && document.activeElement.matches("button, a[href], input")) document.activeElement.click();
+          if (document.activeElement instanceof HTMLSelectElement && document.activeElement.dataset.fieldStatus) {
+            const select = document.activeElement;
+            select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
+            select.dispatchEvent(new Event("change",{bubbles:true}));
+          }
+          else if (document.activeElement instanceof HTMLElement && document.activeElement.matches("button, a[href], input, textarea")) document.activeElement.click();
           else spatialFocus("right");
         }
       } else if (["up","down","left","right"].includes(action)) spatialFocus(action);
