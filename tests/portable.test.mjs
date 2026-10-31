@@ -29,7 +29,7 @@ test("parser rejects unsupported formats, empty and oversized backups",()=>{
   assert.equal(parsePortableSetup("☀".repeat(PORTABLE_MAX_BYTES/3+3)).ok,false);
   assert.equal(parsePortableSetup(JSON.stringify({...backup(),preferences:{mode:"invalid"}})).ok,false);
   assert.equal(parsePortableSetup(JSON.stringify({...backup(),favorites:{sources:{id:"nasa"},games:[]}})).ok,false);
-  assert.equal(parsePortableSetup(JSON.stringify({...backup(),recents:[]}).replace('"recents":[]','"recents":{}')).ok,false);
+  assert.equal(parsePortableSetup(JSON.stringify({...backup(),recents:{}})).ok,false);
 });
 
 test("import drops unknown and duplicate IDs while disclosing each removal",()=>{
