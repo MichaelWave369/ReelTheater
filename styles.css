@@ -176,3 +176,32 @@ html[data-ui-mode="touch"] #arcade-control-status{font-size:12px}
 html[data-ui-mode="tv"] .device-capture-target{font-size:22px;min-height:215px}
 html[data-ui-mode="tv"] .device-stat>span:last-child{font-size:14px}
 html[data-ui-mode="touch"] .device-workbench .action{min-height:52px}
+
+/* Rung 9: TV/remote-friendly unified launch surface for authorized destinations. */
+.quick-home{margin-top:28px;margin-bottom:34px}
+.quick-launch{margin-top:20px}
+.quick-home .section-heading{align-items:center;gap:18px}
+.quick-home .section-heading .action{flex:0 0 auto}
+.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.quick-grid.compact-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.quick-card{display:flex;flex-direction:column;gap:10px;min-height:220px;padding:22px;border-radius:18px;border:1px solid #425274;background:linear-gradient(145deg,#1c2848,#0d182d);min-width:0}
+.quick-card.compact{min-height:163px;padding:19px 20px}
+.quick-card-header{display:flex;justify-content:space-between;align-items:start;gap:8px}
+.quick-kind{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#a9c9ec;line-height:1.5}
+.quick-card h3{font-size:clamp(18px,2vw,23px);line-height:1.2;margin:4px 0 3px}
+.quick-card p{font-size:13px;color:#b8c7e0;line-height:1.55;margin:0}
+.quick-card .quick-open{align-self:stretch;margin-top:auto;text-align:center}
+.quick-card .source-fav{min-width:42px;min-height:42px}
+.quick-recent-label{font-size:11px;color:#d4c4ff}
+.quick-empty{padding:27px;border:1px dashed #687597;border-radius:15px;background:#172341}
+.quick-empty p{color:#c7d5ed;line-height:1.6}
+.quick-empty .action{margin-top:13px}
+.quick-privacy{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:22px;padding:17px 20px;border-radius:13px;background:#1a2039;border:1px solid #40506d}
+.quick-privacy p{font-size:12px;color:#bccae0;line-height:1.6;flex:1 1 280px;margin:0}
+@media(max-width:1320px){.quick-grid,.quick-grid.compact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:780px){.quick-grid,.quick-grid.compact-grid{grid-template-columns:1fr}.quick-home .section-heading{flex-wrap:wrap}.quick-home .section-heading .action{width:100%}.quick-card{min-height:185px}.quick-card.compact{min-height:155px}.quick-privacy .action{width:100%}}
+html[data-ui-mode="tv"] .quick-card h3{font-size:24px}
+html[data-ui-mode="tv"] .quick-card p{font-size:17px}
+html[data-ui-mode="tv"] .quick-kind{font-size:13px}
+html[data-ui-mode="tv"] .quick-open{min-height:62px}
+html[data-ui-mode="touch"] .quick-card .quick-open{min-height:49px}
