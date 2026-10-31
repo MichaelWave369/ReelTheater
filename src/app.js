@@ -1,4 +1,5 @@
 import { startArcade } from "./arcade.js";
+import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from "./sources.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -17,6 +18,9 @@ let controllerWasConnected = false;
 let lastPadAction = "";
 let nextPadActionAt = 0;
 let toastTimer;
+let sourceCategory = "all";
+let sourceQuery = "";
+let sourceFavoritesOnly = false;
 
 function read(key, fallback = "") {
   try { return window.localStorage.getItem("reel-theater:" + key) ?? fallback; }
@@ -43,8 +47,37 @@ function notify(message) {
 function reelLink(text) {
   return '<a href="' + REEL_URL + '" target="_blank" rel="noopener noreferrer" class="action secondary">' + text + '</a>';
 }
+function sourceFavorites() {
+  return parseFavoriteSourceIds(read("favorite-sources", "[]"));
+}
+function sourceSection() {
+  return '<section class="source-discovery" aria-label="Official streaming service directory">' +
+    '<div class="section-heading"><div><h2>Official services, one place</h2><p>Direct destinations only. No repository installation. No misleading Play buttons.</p></div><span class="source-verification">Official links curated Oct 31, 2026</span></div>' +
+    '<div class="source-controls"><label class="source-search-label" for="source-query">Find a service <input id="source-query" type="search" placeholder="Try movies, NASA, Plex..." autocomplete="off" aria-label="Find a streaming service"></label>' +
+    '<div class="source-filters" aria-label="Filter source category">' +
+    SOURCE_CATEGORIES.map(category => '<button type="button" class="source-chip' + (sourceCategory === category.id ? ' selected' : '') + '" data-source-category="' + category.id + '" aria-pressed="' + (sourceCategory === category.id) + '">' + category.label + '</button>').join("") +
+    '<button class="source-chip' + (sourceFavoritesOnly ? ' selected' : '') + '" data-source-favorites-only="true" aria-pressed="' + sourceFavoritesOnly + '">♥ Favorites</button></div></div>' +
+    '<p id="source-count" class="source-count" aria-live="polite"></p><div id="source-results" class="source-grid" aria-label="Official service results"></div>' +
+    '<p class="fineprint">An official destination is not a playable stream in REEL Theater. Xbox app availability does not establish browser compatibility. No site is contacted until you deliberately open it. Third-party catalogs, regions, logins, advertisements and availability can change.</p></section>';
+}
+function renderSourceList() {
+  const container = document.getElementById("source-results");
+  if (!container) return;
+  const favoriteIds = sourceFavorites();
+  const results = findSources({query:sourceQuery, category:sourceCategory, favoritesOnly:sourceFavoritesOnly, favorites:favoriteIds});
+  const count = document.getElementById("source-count");
+  if (count) count.textContent = results.length + ' of ' + SOURCES.length + ' official destinations shown';
+  container.innerHTML = results.length ? results.map(source => {
+    const saved = favoriteIds.includes(source.id);
+    return '<article class="source-card"><div class="source-card-top"><span class="source-icon" aria-hidden="true">' + source.name.slice(0,1) + '</span>' +
+      '<div class="source-name"><h3>' + source.name + '</h3><span>' + source.label + '</span></div>' +
+      '<button class="source-fav" data-source-favorite="' + source.id + '" aria-pressed="' + saved + '" aria-label="' + (saved ? "Remove " : "Save ") + source.name + (saved ? " from favorites" : " to favorites") + '">' + (saved ? "♥" : "♡") + '</button></div>' +
+      '<p>' + source.description + '</p><div class="source-meta"><span>' + source.price + '</span><span>' + source.xbox + '</span></div>' +
+      '<a class="action secondary source-open" href="' + source.url + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + source.name + ' official site">Open official site ↗</a></article>';
+  }).join("") : '<div class="source-empty"><strong>No matching services.</strong><p>Try another category or clear Favorites. No hidden repositories are being searched.</p></div>';
+}
 function hero() {
-  return '<section class="hero"><div class="hero-copy"><div class="eyebrow">✦ YOUR LIVING ROOM. REIMAGINED.</div><h1>Less waiting.<br><em>More watching.</em></h1><p>A home theater that gets out of your way. Watch a sample, play a real arcade game, or bring your own media. No accounts. No mystery repositories.</p><div class="actions"><button data-action="demo" class="action">▷ Watch demo video</button><button data-view="arcade" class="action secondary">✧ Open Arcade</button></div></div></section>';
+  return '<section class="hero"><div class="hero-copy"><div class="eyebrow">✦ YOUR LIVING ROOM. REIMAGINED.</div><h1>Less waiting.<br><em>More watching.</em></h1><p>A home theater that gets out of your way. Watch a sample, play a real arcade game, or bring your own media. No accounts. No mystery repositories.</p><div class="actions"><button data-action="demo" class="action">▷ Watch demo video</button><button data-view="arcade" class="action secondary">✧ Open Arcade</button><button data-view="watch" class="action ghost">⌕ Discover free TV</button></div></div></section>';
 }
 function home() {
   const progress = safeProgress();
@@ -57,20 +90,20 @@ function home() {
     '</section>' +
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
-    '<div class="feature-card"><div class="tag">Media discovery</div><h3>REEL Commons</h3><p>Discover legitimate free streaming sources through our separate REEL project.</p>' + reelLink("Explore the project ↗") + '</div>' +
+    '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
     '<div class="feature-card"><div class="tag">Built for Xbox</div><h3>Controller-first</h3><p>Use the D-pad or left stick, A to select, B to go back. Keyboard and mouse also work.</p><button class="action secondary" data-view="settings">See controls</button></div></section>';
 }
 function watch() {
   return '<div class="page-heading"><div class="eyebrow">THE WATCH ROOM</div><h1>Pick something. Press play.</h1><p>A working player, without digging through repositories. The sample is hosted by MDN; local-file playback never uploads your media.</p></div>' +
     '<div class="card-grid"><div class="feature-card"><div class="tag">CC0 demo · online</div><h3>Flower: Playback Sample</h3><p>A small Creative Commons Zero video used to verify your Xbox browser playback. Network required.</p><button class="action" data-action="demo">▷ Play sample</button></div>' +
     '<div class="feature-card"><div class="tag">Your device · private</div><h3>Open My Media</h3><p>Choose a supported video or audio file using the browser file picker. No upload, scanning, or saved file access.</p><button class="action secondary" data-action="file">▤ Choose a file</button></div></div>' +
-    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>';
+    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + sourceSection();
 }
 function live() {
   return '<div class="page-heading"><div class="eyebrow">LIVE TV</div><h1>No dead channel buttons.</h1><p>This room is intentionally honest. There is no invented channel lineup and no unverified live feed behind the artwork.</p></div>' +
     '<div class="info-panel"><strong>REEL Commons is the source-discovery foundation.</strong><p>For now, this opens the existing REEL Commons project. A future rung can add verified official live-channel links, a clear availability monitor and authorized playlists. We will not pretend a site-directory link is a playable television stream.</p>' + reelLink("Open REEL Commons project ↗") + '</div>' +
     '<div class="section-heading"><div><h2>Next integration</h2><p>Verified channel manifests, clear source labels, and device-tested playback.</p></div></div>' +
-    '<div class="status-grid"><div class="status-block"><h3>Channel catalog</h3><p>Planned: explicit, curated, licensed or authorized sources.</p></div><div class="status-block"><h3>EPG / DVR</h3><p>Planned native-capability work; not available in this browser pilot.</p></div></div>';
+    '<div class="status-grid"><div class="status-block"><h3>Provider shortcuts</h3><p>Official destinations are available below. Their streams open in the provider’s own website or app.</p></div><div class="status-block"><h3>EPG / DVR</h3><p>Planned native-capability work; not available in this browser pilot.</p></div></div>' + sourceSection();
 }
 function library() {
   const isFav = read("favorite-demo") === "yes";
@@ -106,11 +139,15 @@ function render() {
     else el.removeAttribute("aria-current");
   });
   if (view === "arcade") arcadeCleanup = startArcade(document.getElementById("signal-breaker"), document.getElementById("start-game"));
+  const search = document.getElementById("source-query");
+  if (search) { search.value = sourceQuery; renderSourceList(); }
 }
 function setView(target) {
   if (!views.includes(target)) return;
   if (!modal.hidden) closePlayer();
   view = target;
+  if (target === "live") sourceCategory = "live";
+  else if (target === "watch") sourceCategory = "all";
   if (window.location.hash !== "#" + target) window.location.hash = target;
   render();
   const first = main.querySelector("button, a[href]");
@@ -163,10 +200,44 @@ filePicker.addEventListener("change", () => {
   filePicker.value = "";
 });
 document.getElementById("close-player").addEventListener("click", closePlayer);
+document.addEventListener("input", event => {
+  if (event.target && event.target.id === "source-query") {
+    sourceQuery = event.target.value.slice(0, 80);
+    renderSourceList();
+  }
+});
 document.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.view) { setView(button.dataset.view); return; }
+  if (button.dataset.sourceCategory) {
+    sourceCategory = button.dataset.sourceCategory;
+    document.querySelectorAll("[data-source-category]").forEach(el => {
+      const active = el.dataset.sourceCategory === sourceCategory;
+      el.classList.toggle("selected", active);
+      el.setAttribute("aria-pressed", String(active));
+    });
+    renderSourceList();
+    return;
+  }
+  if (button.dataset.sourceFavoritesOnly) {
+    sourceFavoritesOnly = !sourceFavoritesOnly;
+    button.classList.toggle("selected", sourceFavoritesOnly);
+    button.setAttribute("aria-pressed", String(sourceFavoritesOnly));
+    renderSourceList();
+    return;
+  }
+  if (button.dataset.sourceFavorite) {
+    const id = button.dataset.sourceFavorite;
+    const existing = sourceFavorites();
+    const updated = existing.includes(id) ? existing.filter(item => item !== id) : [...existing, id];
+    save("favorite-sources", JSON.stringify(updated));
+    renderSourceList();
+    const next = Array.from(document.querySelectorAll("[data-source-favorite]")).find(el => el.dataset.sourceFavorite === id);
+    if (next) next.focus();
+    else document.querySelector("[data-source-favorites-only]")?.focus();
+    return;
+  }
   const action = button.dataset.action;
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
   if (action === "file") filePicker.click();
@@ -179,7 +250,7 @@ window.addEventListener("hashchange", () => {
   if (views.includes(target) && target !== view) setView(target);
 });
 function spatialFocus(direction) {
-  const elements = Array.from(document.querySelectorAll("#primary-nav button, main button:not(:disabled), main a[href], .topbar button"))
+  const elements = Array.from(document.querySelectorAll("#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), .topbar button"))
     .filter(el => el.getClientRects().length > 0);
   if (!elements.length) return;
   const current = document.activeElement;
@@ -197,6 +268,7 @@ function spatialFocus(direction) {
   if (possible[0]) possible[0].el.focus();
 }
 document.addEventListener("keydown", event => {
+  if (event.target && event.target.matches("input")) return;
   if (!modal.hidden) {
     if (event.key === "Escape") { event.preventDefault(); closePlayer(); }
     return;
@@ -229,7 +301,7 @@ function gamepadLoop(now) {
       if (action === "back") { if (!modal.hidden) closePlayer(); else if (view !== "home") setView("home"); }
       else if (action === "select" && modal.hidden) {
         if (view !== "arcade") {
-          if (document.activeElement instanceof HTMLElement && document.activeElement.matches("button, a[href]")) document.activeElement.click();
+          if (document.activeElement instanceof HTMLElement && document.activeElement.matches("button, a[href], input")) document.activeElement.click();
           else spatialFocus("right");
         }
       } else if (["up","down","left","right"].includes(action)) spatialFocus(action);
@@ -241,6 +313,7 @@ function gamepadLoop(now) {
 }
 const target = window.location.hash.slice(1);
 if (views.includes(target)) view = target;
+if (view === "live") sourceCategory = "live";
 render();
 requestAnimationFrame(gamepadLoop);
 if ("serviceWorker" in navigator && window.location.protocol === "https:") {
