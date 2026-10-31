@@ -8,6 +8,7 @@ import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} fr
 import {makeDeviceLog,appendDeviceInput,inputLabel,gamepadLabel,frameStats,safeDeviceReport} from "./device.js";
 import {QUICK_ITEMS,QUICK_FILTERS,quickItem,favoriteKeys,parseRecents,recordRecent,quickResults,quickHomeItems} from "./quicklaunch.js";
 import {createPortableSetup,parsePortableSetup,mergePortableSetup,describePortableSetup,toStoragePairs,PORTABLE_MAX_BYTES} from "./portable.js";
+import {pollMode,newRedrawLog,appendRedraw,redrawSummary} from "./performance.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -45,6 +46,9 @@ let lastDevicePadLabel = "";
 let deviceBackNeedsRelease = false;
 let frameSampleToken = 0;
 let frameSampling = false;
+let redrawLog = newRedrawLog();
+let nextPadTick = null;
+let padTickKind = null;
 let playerOpener = null;
 const appShell = document.querySelector(".app-shell");
 
@@ -339,6 +343,11 @@ function devicePage() {
     '<div id="device-capture-target" class="device-capture-target" tabindex="0" role="group" aria-label="Input test target. Escape or gamepad B to stop.">Tap here or focus after Start<span id="device-capture-status">Not recording</span></div>' +
     '<p class="fineprint">Keyboard Escape or controller B stops recording after showing that action. If a TV browser does not forward remote keys, there will be no false success.</p>' +
     '<div class="device-input-history"><strong>Recent recognized actions <span id="device-input-count">0</span></strong><ol id="device-input-events" aria-live="polite"><li>No input observed yet</li></ol></div></section>' +
+    '<section class="device-workbench" aria-label="JavaScript UI redraw timings"><div class="section-heading"><div><h2>Screen redraw diagnostics</h2>' +
+    '<p>Shows this browser’s recent synchronous REEL screen rebuild times only. Does not include layout, paint, TV remote delay, media startup, or end-to-end interaction latency.</p></div></div>' +
+    '<p id="device-redraw-result" class="device-frame-result" aria-live="polite">No screen redraw timing observed.</p>' +
+    '<button class="action ghost" data-action="redraw-clear">Clear timing samples</button>' +
+    '<p class="fineprint">In-session only, maximum 24 readings. Nothing is transmitted or added to the Device Lab export.</p></section>' +
     '<section class="device-workbench" aria-label="Local display pacing"><div class="section-heading"><div><h2>Visible-tab frame pacing</h2>' +
     '<p>Sample 60 consecutive animation intervals. This is UI scheduling on this page, not gaming FPS, video decode speed, first-frame latency, or a universal device benchmark.</p></div></div>' +
     '<div class="actions"><button data-action="device-frame" class="action secondary">Run frame sample</button></div>' +
@@ -355,6 +364,7 @@ function updateDeviceLab() {
   set("device-pad",controllerWasConnected?"Detected":"None reported");
   set("device-touch",(navigator.maxTouchPoints||0)>0?"Hint present":"Not reported");
   set("device-shell",navigator.serviceWorker?.controller?"Controlling page":"Unconfirmed");
+  updateRedrawDisplay();
   const target=document.getElementById("device-capture-target");
   const on=document.querySelector('[data-action="device-start"]');
   const off=document.querySelector('[data-action="device-stop"]');
@@ -379,6 +389,15 @@ function updateDeviceLab() {
     const f=deviceLog.frame;
     set("device-frame-result",f.samples+" intervals · median "+f.medianMs+" ms · p95 "+f.p95Ms+" ms · longest "+f.longestMs+" ms. Not video/game FPS.");
   }
+}
+function updateRedrawDisplay() {
+  const node=document.getElementById("device-redraw-result");
+  if(!node)return;
+  const summary=redrawSummary(redrawLog);
+  node.textContent=summary ?
+    summary.count+" screen rebuilds · latest "+summary.lastMs+" ms · median "+summary.medianMs+
+    " ms · p95 "+summary.p95Ms+" ms · worst "+summary.worstMs+" ms. JavaScript DOM work, not paint." :
+    "No screen redraw timing observed.";
 }
 function stopDeviceCapture() {
   deviceCapture=false;
@@ -591,6 +610,7 @@ function settings() {
 
 const pages = {home, quick:quickPage, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), device:devicePage, settings};
 function render() {
+  const redrawStarted=performance.now();
   if (arcadeCleanup) { arcadeCleanup(); arcadeCleanup = null; }
   main.innerHTML = pages[view]();
   document.querySelectorAll("#primary-nav [data-view]").forEach(el => {
@@ -614,9 +634,13 @@ function render() {
   updateConnection();
   renderPlaybackHealth();
   updateDeviceLab();
+  redrawLog=appendRedraw(redrawLog,{view,durationMs:performance.now()-redrawStarted});
+  updateRedrawDisplay();
 }
 function setView(target) {
   if (!views.includes(target)) return;
+  // Selecting the active tab should not destroy its input fields or restart the arcade.
+  if(target===view && modal.hidden)return;
   if (!modal.hidden) closePlayer();
   if(view==="device" && target!=="device"){stopDeviceCapture();cancelFrameSample();}
   view = target;
@@ -741,6 +765,9 @@ document.addEventListener("click", event => {
   }
   const button = event.target.closest("button");
   if (!button) return;
+  if(button.dataset.action==="redraw-clear"){
+    redrawLog=newRedrawLog();updateRedrawDisplay();notify("Local redraw timings cleared.");return;
+  }
   if(button.dataset.action==="portable-show"){showPortableExport();return;}
   if(button.dataset.action==="portable-download"){downloadPortableExport();return;}
   if(button.dataset.action==="portable-copy"){copyPortableExport();return;}
@@ -933,6 +960,29 @@ document.addEventListener("keydown", event => {
   else if(remoteBackKey(event.key) && view!=="home") {event.preventDefault();setView("home");}
 });
 
+function queueGamepadTick({connected=false,urgent=false}={}) {
+  if(nextPadTick!==null){
+    if(!urgent)return;
+    if(padTickKind==="frame")cancelAnimationFrame(nextPadTick);
+    else clearTimeout(nextPadTick);
+    nextPadTick=null;
+    padTickKind=null;
+  }
+  const policy=pollMode({connected,capturing:deviceCapture,hidden:document.hidden});
+  if(urgent || policy.kind==="frame"){
+    padTickKind="frame";
+    nextPadTick=requestAnimationFrame(now=>{
+      nextPadTick=null;padTickKind=null;
+      gamepadLoop(now);
+    });
+  }else{
+    padTickKind="timeout";
+    nextPadTick=setTimeout(()=>{
+      nextPadTick=null;padTickKind=null;
+      queueGamepadTick({connected:true});
+    },policy.delayMs);
+  }
+}
 function gamepadLoop(now) {
   const pads=navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
   const pad=pads[0];
@@ -952,11 +1002,11 @@ function gamepadLoop(now) {
     }
     lastDevicePadLabel=label||"";
     lastPadAction=""; // Re-arm menu controller after explicit capture stop.
-    requestAnimationFrame(gamepadLoop);
+    queueGamepadTick({connected});
     return;
   }
   if(deviceBackNeedsRelease){
-    if(pad?.buttons?.[1]?.pressed){requestAnimationFrame(gamepadLoop);return;}
+    if(pad?.buttons?.[1]?.pressed){queueGamepadTick({connected});return;}
     deviceBackNeedsRelease=false;
   }
   if(pad) {
@@ -988,7 +1038,7 @@ function gamepadLoop(now) {
     // B must be released before it can exit the parent view after leaving a game.
     lastPadAction=action==="exit-game"?"back":action;
   }else lastPadAction="";
-  requestAnimationFrame(gamepadLoop);
+  queueGamepadTick({connected});
 }
 
 const target = window.location.hash.slice(1);
@@ -1011,7 +1061,11 @@ window.addEventListener("appinstalled",()=>{
   const button=document.getElementById("install-pwa");
   if (button) button.hidden=true;
 });
-requestAnimationFrame(gamepadLoop);
+// Poll slowly when no controller is available; wake promptly on browser events.
+window.addEventListener("gamepadconnected",()=>queueGamepadTick({urgent:true}));
+window.addEventListener("gamepaddisconnected",()=>queueGamepadTick({urgent:true}));
+document.addEventListener("visibilitychange",()=>queueGamepadTick({urgent:true}));
+queueGamepadTick({urgent:true});
 if ("serviceWorker" in navigator && (window.location.protocol === "https:" || ["localhost","127.0.0.1"].includes(window.location.hostname))) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
