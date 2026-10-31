@@ -78,7 +78,7 @@ test("controller gameplay must be entered explicitly and exited without double B
 });
 test("offline cache only includes the new first-party remote module",()=>{
   const sw=readFileSync("sw.js","utf8");
-  assert.match(sw,/reel-theater-shell-v11/);
+  assert.match(sw,/reel-theater-shell-v12/);
   assert.match(sw,/src\/remote\.js/);
   assert.match(sw,/url\.origin !== self\.location\.origin/);
   assert.doesNotMatch(sw,/tubitv\.com|flower\.mp4|michaelwave369\.github\.io/);
