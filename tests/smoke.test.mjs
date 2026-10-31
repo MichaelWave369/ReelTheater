@@ -37,6 +37,8 @@ test("selected local file path has explicit picker", () => {
 test("navigation supports clicks, key controls and Xbox controllers", () => {
   const app = read("src/app.js");
   assert.match(app, /spatialFocus/);
-  assert.match(app, /requestAnimationFrame\(gamepadLoop\)/);
+  assert.match(app, /queueGamepadTick/);
+  assert.match(app, /gamepadconnected/);
+  assert.match(app, /gamepadIntent/);
   assert.match(app, /document\.addEventListener\("click"/);
 });
