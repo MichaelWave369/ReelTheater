@@ -50,3 +50,67 @@ button:focus,a:focus,input:focus{outline:3px solid #aef1ff;outline-offset:3px}
 .source-self-report{font-size:11px;color:#cdb9f2;border-left:3px solid #8874c3;padding:5px 10px;background:#35305232;border-radius:0 7px 7px 0}
 @media(max-width:1100px){.field-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.field-summary{flex-direction:column;align-items:stretch}.field-summary .action{width:100%}}
+
+/* Rung 4: Every Screen. Layout selection affects presentation, never content or rights. */
+html{scrollbar-gutter:stable}
+.connection-status{font-size:11px;color:#93b1c8;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.setup-card{padding:24px;border:1px solid #4d5770;background:linear-gradient(160deg,#141f37,#0f192e);border-radius:17px;display:flex;flex-direction:column;gap:13px}
+.setup-card h2,.setup-card h3{font-size:22px;margin:7px 0}
+.setup-card p{font-size:14px;color:#b1bed5;line-height:1.55;margin:5px 0 0}
+.layout-choice{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#cbd6ed;font-size:13px}
+.layout-choice select{width:min(280px,100%);background:#0a1429;border:1px solid #677b9d;color:#f6f7fc;border-radius:11px;padding:14px;font-size:16px;min-height:52px}
+.layout-effective{font-weight:700;color:#bbd7e9!important}
+[hidden]{display:none!important}
+html[data-ui-mode="tv"] .app-shell{grid-template-columns:260px minmax(0,1fr)}
+html[data-ui-mode="tv"] .sidebar{padding-top:37px}
+html[data-ui-mode="tv"] .brand{margin-bottom:65px}
+html[data-ui-mode="tv"] .nav-link{min-height:65px;font-size:17px;gap:16px}
+html[data-ui-mode="tv"] .nav-symbol{font-size:26px}
+html[data-ui-mode="tv"] .workspace main{padding-left:clamp(38px,4vw,80px);padding-right:clamp(38px,4vw,80px)}
+html[data-ui-mode="tv"] .tile{min-height:215px}
+html[data-ui-mode="tv"] .action,html[data-ui-mode="tv"] .source-chip{min-height:57px;font-size:16px}
+html[data-ui-mode="tv"] .source-card p,html[data-ui-mode="tv"] .feature-card p{font-size:16px}
+html[data-ui-mode="tv"] :is(button,a,input,textarea,select):focus-visible{outline-width:4px;outline-offset:4px}
+html[data-ui-mode="touch"] .app-shell{display:block;min-height:100vh}
+html[data-ui-mode="touch"] .sidebar{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:90;width:100%;height:auto;min-height:0;border:0;border-top:1px solid #6772a74d;padding:8px max(10px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:#0d1428f5;backdrop-filter:blur(16px)}
+html[data-ui-mode="touch"] :is(.sidebar .brand,.sidebar .nav-group-title,.sidebar .side-bottom){display:none}
+html[data-ui-mode="touch"] .nav-stack{display:flex;flex-direction:row;gap:3px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+html[data-ui-mode="touch"] .nav-link{display:flex;flex:1 0 75px;min-width:75px;max-width:none;min-height:60px;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 7px;font-size:11px;line-height:1.2;text-align:center;white-space:nowrap}
+html[data-ui-mode="touch"] .nav-symbol{font-size:24px;width:auto}
+html[data-ui-mode="touch"] .nav-link.active{box-shadow:inset 0 3px #9e85ff}
+html[data-ui-mode="touch"] .workspace{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+html[data-ui-mode="touch"] .workspace main{padding:10px clamp(16px,4vw,30px) 35px}
+html[data-ui-mode="touch"] .topbar{padding:10px clamp(16px,4vw,30px);height:69px}
+html[data-ui-mode="touch"] .tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-ui-mode="touch"] .hero{padding:clamp(24px,5vw,42px);min-height:305px}
+html[data-ui-mode="touch"] .hero h1{font-size:clamp(35px,6vw,62px)}
+html[data-ui-mode="touch"] .tile{min-height:155px}
+html[data-ui-mode="touch"] .action,html[data-ui-mode="touch"] .source-chip{min-height:49px}
+html[data-ui-mode="touch"] .footer{padding:18px clamp(16px,4vw,30px)}
+html[data-ui-mode="touch"] .player-modal{padding:10px}
+html[data-ui-mode="touch"] .player-box video{max-height:65vh}
+html[data-ui-mode="touch"] .source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-ui-mode="touch"] .source-card{padding:18px}
+html[data-ui-mode="touch"] .field-grid{grid-template-columns:1fr}
+@media(max-width:760px){
+  html[data-ui-mode="touch"] .tile-grid,html[data-ui-mode="touch"] .source-grid{grid-template-columns:1fr}
+  html[data-ui-mode="touch"] .card-grid{grid-template-columns:1fr}
+  html[data-ui-mode="touch"] .top-label{display:none}
+  html[data-ui-mode="touch"] .top-actions{width:100%;justify-content:space-between}
+  html[data-ui-mode="touch"] .connection-status{max-width:60vw}
+  html[data-ui-mode="touch"] .hero{min-height:320px}
+  html[data-ui-mode="touch"] .hero-copy .actions{gap:9px}
+  html[data-ui-mode="touch"] .hero-copy .action{flex:1 1 auto}
+  .layout-choice{align-items:stretch;flex-direction:column}
+  .layout-choice select{width:100%}
+}
+@media(max-width:360px){
+ html[data-ui-mode="touch"] .nav-link{flex-basis:72px;min-width:72px}
+ html[data-ui-mode="touch"] .hero h1{font-size:35px}
+}
+@media(orientation:landscape) and (max-height:490px){
+ html[data-ui-mode="touch"] .sidebar{padding-top:4px;padding-bottom:calc(3px + env(safe-area-inset-bottom))}
+ html[data-ui-mode="touch"] .nav-link{min-height:46px;flex-direction:row;gap:5px}
+ html[data-ui-mode="touch"] .workspace{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+ html[data-ui-mode="touch"] .hero{min-height:240px}
+}
