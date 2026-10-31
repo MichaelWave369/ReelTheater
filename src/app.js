@@ -3,7 +3,8 @@ import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from ".
 import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,updateFieldEntry,fieldCounts,fieldMarkup} from "./field.js";
 import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remoteBackKey} from "./platform.js";
 import {GAMES,GAME_CATEGORIES,filterGames,parseGameFavorites} from "./games.js";
-import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGuidance} from "./playback.js";
+import {createPlaybackSession,recordPlaybackEvent,recordVideoFrameCallback,setVideoFrameObservation,firstVideoFrameLabel,safePlaybackSummary,playbackGuidance} from "./playback.js";
+import {inspectMediaSupport} from "./media-support.js";
 import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} from "./remote.js";
 import {makeDeviceLog,appendDeviceInput,inputLabel,gamepadLabel,frameStats,safeDeviceReport} from "./device.js";
 import {QUICK_ITEMS,QUICK_FILTERS,quickItem,favoriteKeys,parseRecents,recordRecent,quickResults,quickHomeItems} from "./quicklaunch.js";
@@ -34,6 +35,8 @@ let gameQuery = "";
 let gameCategory = "all";
 let gameFavoritesOnly = false;
 let playbackSession = createPlaybackSession();
+let videoFrameHandle = null;
+let videoFrameToken = 0;
 let installPrompt = null;
 let currentMode = "desktop";
 let quickQuery = "";
@@ -258,9 +261,43 @@ function home() {
     '<div class="feature-card"><div class="tag">Manual field testing</div><h3>The Shayne Test</h3><p>Record what really works with games and video on this browser.</p><button class="action secondary" data-view="field">Open Field Lab</button></div>' +
     '<div class="feature-card"><div class="tag">Device readiness</div><h3>Input &amp; Frame Lab</h3><p>Observe remote, gamepad and touch actions, then measure local UI pacing.</p><button class="action secondary" data-view="device">Open Device Lab</button></div></section>';
 }
+function mediaSupportSection() {
+  return '<section class="media-support-panel" aria-label="Browser media format hints">' +
+    '<div class="section-heading"><div><h2>What formats does this browser report?</h2>' +
+    '<p>A format hint is not a playback test. This probes the local video element only when you press Check.</p></div></div>' +
+    '<button class="action secondary" data-action="inspect-formats">Check browser format hints</button>' +
+    '<div id="media-support-results" class="media-support-results" aria-live="polite"><p>No checks run yet. Codec support may change across browsers and devices.</p></div>' +
+    '<p class="fineprint">The answers are generated inside your browser. No external codec database, account, fingerprint upload, provider login, DRM test or network request is involved. "Probably" and "maybe" do not guarantee a file or stream plays.</p></section>';
+}
+function renderMediaSupport() {
+  const result=inspectMediaSupport(player,{
+    mediaSource:typeof window.MediaSource!=="undefined",
+    frameCallback:typeof player.requestVideoFrameCallback==="function"
+  });
+  const container=document.getElementById("media-support-results");
+  if(!container)return;
+  container.replaceChildren();
+  const list=document.createElement("ul");
+  list.className="media-support-list";
+  for(const row of result.formats){
+    const item=document.createElement("li");
+    const label=document.createElement("span");
+    label.textContent=row.name;
+    const value=document.createElement("strong");
+    value.textContent=row.hint;
+    item.append(label,value);
+    list.appendChild(item);
+  }
+  container.appendChild(list);
+  const api=document.createElement("p");
+  api.className="media-support-api";
+  api.textContent="MediaSource API: "+(result.mediaSourceAPI?"present":"not reported")+
+    " · Video-frame callback API: "+(result.videoFrameCallbackAPI?"present":"not reported");
+  container.appendChild(api);
+}
 function playbackHealthSection() {
   return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
-    '<div class="health-details"><div><span class="eyebrow">CURRENT ATTEMPT</span><h3 id="health-status">Not started</h3><p id="health-guidance">Choose the demo or a local file to see events.</p><p id="health-first-event">First playing event: not observed</p></div>' +
+    '<div class="health-details"><div><span class="eyebrow">CURRENT ATTEMPT</span><h3 id="health-status">Not started</h3><p id="health-guidance">Choose the demo or a local file to see events.</p><p id="health-first-event">First playing event: not observed</p><p id="health-first-frame">First video frame callback: not checked</p></div>' +
     '<div><strong>Recent events</strong><ol id="health-events" class="health-events"><li>No playback attempts yet.</li></ol></div></div>' +
     '<button class="action secondary" data-action="export-health">Download privacy-safe diagnostics</button>' +
     '<p class="fineprint">This report contains only event names, elapsed milliseconds, a generic error category and demo/local indicator. It never includes the selected local filename or media URL. A playing event does not independently verify picture or sound.</p></section>';
@@ -278,6 +315,10 @@ function renderPlaybackHealth() {
   const first=document.getElementById("health-first-event");
   if (first) first.textContent=summary.firstPlayingMs===null ?
     "First playing event: not observed" : "First playing event: "+summary.firstPlayingMs+" ms after start (not first visible frame)";
+  for(const id of ["health-first-frame","player-health-frame"]){
+    const node=document.getElementById(id);
+    if(node)node.textContent=firstVideoFrameLabel(playbackSession);
+  }
   for (const id of ["health-events","player-health-events"]) {
     const node=document.getElementById(id);
     if (!node) continue;
@@ -295,7 +336,7 @@ function renderPlaybackHealth() {
 }
 function exportPlaybackHealth() {
   const summary=safePlaybackSummary(playbackSession);
-  const blob=new Blob([JSON.stringify({schema:"REEL_PLAYBACK_SESSION_V1",summary,disclaimer:"Local event signals only; not proof of audio/video rendering or provider support."},null,2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({schema:"REEL_PLAYBACK_SESSION_V2",summary,disclaimer:"Local media-element events and optional video-frame callback only. Neither guarantees visible picture, audible sound, supported DRM or provider playback."},null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
   a.href=url;
@@ -309,7 +350,7 @@ function watch() {
   return '<div class="page-heading"><div class="eyebrow">THE WATCH ROOM</div><h1>Pick something. Press play.</h1><p>A working player, without digging through repositories. The sample is hosted by MDN; local-file playback never uploads your media.</p></div>' +
     '<div class="card-grid"><div class="feature-card"><div class="tag">CC0 demo · online</div><h3>Flower: Playback Sample</h3><p>A small Creative Commons Zero video used to verify your Xbox browser playback. Network required.</p><button class="action" data-action="demo">▷ Play sample</button></div>' +
     '<div class="feature-card"><div class="tag">Your device · private</div><h3>Open My Media</h3><p>Choose a supported video or audio file using the browser file picker. No upload, scanning, or saved file access.</p><button class="action secondary" data-action="file">▤ Choose a file</button></div></div>' +
-    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + playbackHealthSection() + sourceSection();
+    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + playbackHealthSection() + mediaSupportSection() + sourceSection();
 }
 function live() {
   return '<div class="page-heading"><div class="eyebrow">LIVE TV</div><h1>No dead channel buttons.</h1><p>This room is intentionally honest. There is no invented channel lineup and no unverified live feed behind the artwork.</p></div>' +
@@ -651,11 +692,38 @@ function setView(target) {
   const first = main.querySelector("button, a[href]");
   if (first) focusAndReveal(first);
 }
-function showPlayer(title, url, isSample, resume = false) {
+function stopVideoFrameWatch() {
+  videoFrameToken++;
+  if(videoFrameHandle!==null && typeof player.cancelVideoFrameCallback==="function"){
+    try{player.cancelVideoFrameCallback(videoFrameHandle);}catch{}
+  }
+  videoFrameHandle=null;
+}
+function startVideoFrameWatch() {
+  if(playbackSession.videoFrameObservation!=="pending")return;
+  const token=videoFrameToken;
+  const onFrame=now=>{
+    if(token!==videoFrameToken || modal.hidden || playbackSession.videoFrameObservation!=="pending")return;
+    videoFrameHandle=null;
+    if(player.videoWidth>0 && player.videoHeight>0){
+      playbackSession=recordVideoFrameCallback(playbackSession,{now,hasVideo:true});
+      renderPlaybackHealth();
+    }else{
+      // A callback without valid video dimensions is not evidence of a video frame.
+      try{videoFrameHandle=player.requestVideoFrameCallback(onFrame);}
+      catch{playbackSession=setVideoFrameObservation(playbackSession,"unavailable");renderPlaybackHealth();}
+    }
+  };
+  try{videoFrameHandle=player.requestVideoFrameCallback(onFrame);}
+  catch{playbackSession=setVideoFrameObservation(playbackSession,"unavailable");renderPlaybackHealth();}
+}
+function showPlayer(title, url, isSample, resume = false, audioOnly = false) {
   closePlayer();
   playerOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   samplePlaying = isSample;
   playbackSession = createPlaybackSession({kind:isSample?"demo":"local",started:performance.now()});
+  playbackSession=setVideoFrameObservation(playbackSession,audioOnly?"not-applicable":
+    typeof player.requestVideoFrameCallback==="function"?"pending":"unavailable");
   renderPlaybackHealth();
   document.getElementById("player-title").textContent = title;
   document.getElementById("player-note").textContent = isSample ?
@@ -665,6 +733,7 @@ function showPlayer(title, url, isSample, resume = false) {
   if (appShell) appShell.inert = true;
   player.src = url;
   player.load();
+  startVideoFrameWatch();
   if (isSample && resume && safeProgress() > 0) {
     player.addEventListener("loadedmetadata", function seekOnce() {
       player.removeEventListener("loadedmetadata", seekOnce);
@@ -675,6 +744,7 @@ function showPlayer(title, url, isSample, resume = false) {
   document.getElementById("close-player").focus();
 }
 function closePlayer() {
+  stopVideoFrameWatch();
   const wasOpen=!modal.hidden;
   modal.hidden=true;
   if (appShell) appShell.inert=false;
@@ -714,7 +784,7 @@ filePicker.addEventListener("change", () => {
   const file = filePicker.files && filePicker.files[0];
   if (!file) return;
   const selectedUrl = URL.createObjectURL(file);
-  showPlayer(file.name, selectedUrl, false);
+  showPlayer(file.name, selectedUrl, false, false, file.type.startsWith("audio/"));
   localMediaUrl = selectedUrl;
   filePicker.value = "";
 });
@@ -881,6 +951,7 @@ document.addEventListener("click", event => {
     button.hidden=true;
     return;
   }
+  if (action === "inspect-formats") { renderMediaSupport(); return; }
   if (action === "export-health") { exportPlaybackHealth(); return; }
   if (action === "export-field") { exportFieldReport(); return; }
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
