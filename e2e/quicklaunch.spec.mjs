@@ -68,7 +68,7 @@ test("explicit external link clicks create local recents, never hidden provider 
   // Test the delegated user-activation path without contacting any provider.
   await nasa.evaluate(el=>{
     const event=new MouseEvent("click",{bubbles:true,cancelable:true});
-    el.addEventListener("click",e=>e.preventDefault(),{once:true});
+    document.addEventListener("click",e=>e.preventDefault(),{once:true});
     el.dispatchEvent(event);
   });
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem("reel-theater:recent-links")||"[]"))).toEqual(["source:nasa"]);
