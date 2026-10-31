@@ -16,6 +16,17 @@ REEL Theater is a separate companion to [ReelCommons](https://github.com/Michael
 - Service worker caches only the app shell, never media or external services
 - Honest media and streaming limitations, not pretend live television
 
+## Rung 2 (v0.2.0) — No-repo-maze discovery
+
+- Source guide for six official destinations: Tubi, Pluto TV, Plex Free, PBS, NASA+ and REEL Commons
+- TV-distance category filters, instant search, browser-local favorite source buttons
+- Curated official-source URLs with evidence notes and conservative Xbox labels
+- Offline source browsing via versioned shell-only service worker cache
+- External destinations labeled **Open official site**. No fake playable feeds or cross-origin streaming claims
+- New source validation and integration smoke tests
+
+For source policy, official reference pages and Xbox acceptance, see [Source Discovery](docs/SOURCE_DISCOVERY.md).
+
 ## Run locally
 
 Use a static HTTP server in the repository root:
@@ -43,10 +54,10 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 
 ## Roadmap
 
-1. **Rung 1:** Controller-first shell; sample and chosen-file playback; original arcade game. This PR.
-2. **Rung 2:** Source-verified official discovery links and clearer ReelCommons integration, keeping directory entries separate from direct playable media.
-3. **Rung 3:** Device-tested original game catalog; supported non-DRM media formats; offline health checks.
-4. **Rung 4:** Investigate a supported native Xbox app, authorized media server access, live TV guide and DVR capability.
+1. **Rung 1:** Controller-first shell, sample and selected media playback, original arcade game (merged).
+2. **Rung 2:** Source-verified official discovery links, filtering and favorites (this PR).
+3. **Rung 3:** Actual Xbox compatibility receipts, source-health feedback and tested original game catalog.
+4. **Rung 4:** Investigate supported Xbox native app, authorized media-server access, EPG and DVR.
 
 ## Rights and scope
 
