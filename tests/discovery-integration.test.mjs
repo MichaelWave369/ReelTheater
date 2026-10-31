@@ -26,7 +26,7 @@ test("search works without network calls and favorites are local-only", () => {
   assert.match(app, /findSources/);
 });
 test("service worker caches the local source manifest but no external sources", () => {
-  assert.match(sw, /reel-theater-shell-v9/);
+  assert.match(sw, /reel-theater-shell-v10/);
   assert.match(sw, /src\/sources\.js/);
   assert.match(sw, /url\.origin !== self\.location\.origin/);
   assert.doesNotMatch(sw, /pluto\.tv|tubitv\.com|watch\.plex\.tv/);
