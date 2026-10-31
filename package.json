@@ -1,11 +1,11 @@
 {
   "name": "reel-theater",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "Responsive local-first browser and PWA media and arcade launchpad for TVs, mobile, tablet and desktop.",
+  "description": "Local-first TV, mobile and desktop media and original browser game portal with privacy-safe playback diagnostics.",
   "scripts": {
-    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
+    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check src/games.js && node --check src/playback.js && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
     "build": "node scripts/build.mjs"
   },
   "license": "MIT"
