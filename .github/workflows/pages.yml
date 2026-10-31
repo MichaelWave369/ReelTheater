@@ -16,9 +16,31 @@ jobs:
           node-version: '22'
       - run: npm test
       - run: npm run build
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run build
+      # Test-only tooling, pinned. No browser automation is bundled into the shipped app.
+      - run: npm install --no-save --no-package-lock --ignore-scripts @playwright/test@1.64.1
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config=playwright.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reel-browser-acceptance
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: validate
+    needs: [validate, browser]
     runs-on: ubuntu-latest
     permissions:
       contents: read
