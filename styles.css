@@ -30,3 +30,23 @@
 .source-empty{grid-column:1/-1;padding:28px;border:1px dashed #4e5a79;border-radius:14px;color:#d5dcf1}.source-empty p{color:#a8b5d1}
 button:focus,a:focus,input:focus{outline:3px solid #aef1ff;outline-offset:3px}
 @media(max-width:1060px){.source-grid{grid-template-columns:1fr}.source-verification{display:none}}
+
+/* Rung 3: Xbox Field Lab. Local observations, not platform certification. */
+.field-summary{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px;padding:18px 22px;border-radius:16px;background:#201c39;border:1px solid #7163ae70}
+.field-summary strong{font-size:21px;color:#dfd3ff}
+.field-summary span{font-size:13px;color:#bccae3}
+.field-grid{margin-top:26px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.field-card{border:1px solid #3b4a6d;border-radius:17px;background:linear-gradient(160deg,#17223b,#0f1628);padding:24px;min-width:0}
+.field-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.field-card h3{font-size:21px;line-height:1.2;margin:8px 0 12px}
+.field-card p{font-size:13px;color:#b5c3dd;line-height:1.65;min-height:38px}
+.field-state{border:1px solid #8d7eb85c;background:#282547;border-radius:9px;padding:7px 10px;color:#c7bbff;font-size:11px}
+.field-actions{display:flex;align-items:end;gap:13px;flex-wrap:wrap;margin-top:17px}
+.field-actions label{flex:1;min-width:160px;display:flex;flex-direction:column;gap:7px;color:#b8c5e1;font-size:12px}
+.field-actions select,.field-note-label textarea{min-height:48px;background:#0b1224;border:1px solid #5b6a88;border-radius:9px;padding:10px 13px;color:#f5f7ff;font-size:14px;width:100%}
+.field-actions select option{background:#10192e}
+.field-note-label{display:flex;flex-direction:column;gap:9px;font-size:12px;color:#9baacc;margin-top:18px}
+.field-note-label textarea{resize:vertical;min-height:67px;line-height:1.5}
+.source-self-report{font-size:11px;color:#cdb9f2;border-left:3px solid #8874c3;padding:5px 10px;background:#35305232;border-radius:0 7px 7px 0}
+@media(max-width:1100px){.field-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.field-summary{flex-direction:column;align-items:stretch}.field-summary .action{width:100%}}
