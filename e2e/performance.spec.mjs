@@ -79,7 +79,7 @@ test("gamepadconnected wakes the scheduler and B still returns Home",async({page
   });
   await expect.poll(()=>page.locator("#controller-status").textContent()).toContain("Controller connected");
   const before=await page.evaluate(()=>window.__padReads);
-  await expect.poll(()=>page.evaluate(()=>window.__padReads-before),{timeout:2000}).toBeGreaterThan(5);
+  await expect.poll(()=>page.evaluate(start=>window.__padReads-start,before),{timeout:2000}).toBeGreaterThan(5);
   await page.evaluate(()=>window.__buttons[1].pressed=true);
   await expect(page.locator('#primary-nav [data-view="home"]')).toHaveAttribute("aria-current","page");
   await page.evaluate(()=>window.__buttons[1].pressed=false);
