@@ -10,7 +10,7 @@ export const INPUT_LIMIT=20;
 export const FRAME_LIMIT=90;
 
 export function inputLabel(key) {
-  return Object.hasOwn(DEVICE_KEYS,String(key)) ? DEVICE_KEYS[key] : null;
+  return Object.prototype.hasOwnProperty.call(DEVICE_KEYS,String(key)) ? DEVICE_KEYS[key] : null;
 }
 export function makeDeviceLog() {
   return {inputs:[],frame:null};
