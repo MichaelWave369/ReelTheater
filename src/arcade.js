@@ -14,6 +14,7 @@ export function startArcade(canvas, startButton) {
   let lives = 3, score = 0, blocks = [], active = false, finished = false;
   let last = 0, raf = 0, destroyed = false;
   let padLaunchWasDown = false;
+  const isPlayingWithControls = () => document.activeElement === canvas;
   function reset() {
     paddleX = (W - PADDLE_W) / 2;
     ballX = W / 2; ballY = H - 68;
@@ -25,6 +26,8 @@ export function startArcade(canvas, startButton) {
       blocks.push({x: 50 + col * 96, y: 83 + row * 39, w: 83, h: 24, color: colors[row], alive: true});
     }
     startButton.textContent = "↻ Restart";
+    canvas.focus({preventScroll:true});
+    document.getElementById("arcade-control-status")?.replaceChildren(document.createTextNode("Playing Signal Breaker. Press B or Escape to return to the menu."));
   }
   function drawRoundRect(x, y, w, h, radius, fill) {
     ctx.fillStyle = fill;
@@ -56,9 +59,10 @@ export function startArcade(canvas, startButton) {
     }
   }
   function onKeyDown(e) {
-    if (["ArrowLeft", "ArrowRight", " ", "a", "d", "A", "D"].includes(e.key)) {
+    if (!isPlayingWithControls()) return;
+    if (["ArrowLeft", "ArrowRight", " ", "a", "d", "A", "D", "Enter"].includes(e.key)) {
       e.preventDefault(); keys.add(e.key.toLowerCase());
-      if (e.key === " " && !active) reset();
+      if ((e.key === " " || e.key === "Enter") && !active) reset();
     }
   }
   function onKeyUp(e) { keys.delete(e.key.toLowerCase()); }
@@ -74,7 +78,7 @@ export function startArcade(canvas, startButton) {
     if (keys.has("arrowleft") || keys.has("a")) direction -= 1;
     if (keys.has("arrowright") || keys.has("d")) direction += 1;
     const pad = navigator.getGamepads ? Array.from(navigator.getGamepads()).find(Boolean) : null;
-    if (pad) {
+    if (pad && isPlayingWithControls()) {
       const left = pad.buttons[14] && pad.buttons[14].pressed;
       const right = pad.buttons[15] && pad.buttons[15].pressed;
       const axis = pad.axes[0] || 0;
@@ -83,7 +87,7 @@ export function startArcade(canvas, startButton) {
       const launchDown = !!(pad.buttons[0] && pad.buttons[0].pressed);
       if (launchDown && !padLaunchWasDown && !active) reset();
       padLaunchWasDown = launchDown;
-    }
+    } else padLaunchWasDown = false;
     paddleX = Math.max(0, Math.min(W - PADDLE_W, paddleX + direction * 8 * dt));
     if (active && document.visibilityState !== "hidden") {
       ballX += ballVX * dt; ballY += ballVY * dt;
@@ -115,6 +119,7 @@ export function startArcade(canvas, startButton) {
     raf = requestAnimationFrame(tick);
   }
   startButton.addEventListener("click", reset);
+  canvas.addEventListener("focus",()=>keys.clear());
   canvas.addEventListener("pointermove", onMove);
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("keyup", onKeyUp);
