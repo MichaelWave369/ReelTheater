@@ -8,7 +8,7 @@ import {
 } from "../src/field.js";
 
 test("field targets include own game and every curated official source", () => {
-  assert.equal(FIELD_TARGETS.length, 9);
+  assert.equal(FIELD_TARGETS.length, 12);
   assert.equal(new Set(FIELD_TARGETS.map(x=>x.id)).size, FIELD_TARGETS.length);
   assert.ok(FIELD_TARGETS.some(t=>t.id==="btm" && t.url===FIELD_GAME_URL));
   assert.ok(FIELD_GAME_URL.startsWith("https://michaelwave369.github.io/BTM/"));
@@ -19,7 +19,7 @@ test("field targets include own game and every curated official source", () => {
 test("a new report never pretends device testing has happened", () => {
   const empty = emptyFieldReport();
   assert.deepEqual(empty.entries, {});
-  assert.deepEqual(fieldCounts(empty), {total:9,tested:0,worked:0,failed:0,opened:0});
+  assert.deepEqual(fieldCounts(empty), {total:12,tested:0,worked:0,failed:0,opened:0});
   assert.match(fieldMarkup(empty), /private, self-reported observations/);
   assert.match(fieldMarkup(empty), /Opened, unverified playback/);
 });
@@ -71,7 +71,7 @@ test("field launcher has controller routes, JSON export and local-only storage",
   assert.match(app,/HTMLSelectElement/);
   assert.match(app,/select.dispatchEvent\(new Event\("change"/);
   assert.match(app,/FIELD_GAME_URL/);
-  assert.match(sw,/reel-theater-shell-v4/);
+  assert.match(sw,/reel-theater-shell-v5/);
   assert.match(sw,/src\/field\.js/);
   assert.doesNotMatch(sw,/BTM\/|michaelwave369\.github\.io/);
 });
