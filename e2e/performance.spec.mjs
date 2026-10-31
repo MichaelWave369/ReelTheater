@@ -24,6 +24,8 @@ test("selecting the active Arcade tab never recreates a running game canvas",asy
   await page.locator("#signal-breaker").evaluate(el=>el.dataset.testPreserved="running");
   await page.locator('#primary-nav [data-view="arcade"]').click();
   await expect(page.locator("#signal-breaker")).toHaveAttribute("data-test-preserved","running");
+  // Clicking the active navigation button moves focus out of gameplay; reacquire it explicitly.
+  await page.locator("#signal-breaker").focus();
   await page.keyboard.press("Escape");
   await expect(page.locator("#start-game")).toBeFocused();
 });
