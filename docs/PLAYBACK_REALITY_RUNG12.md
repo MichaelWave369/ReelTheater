@@ -34,7 +34,9 @@ Fallbacks are explicit:
 - "not applicable to audio" for a locally selected audio-only media file;
 - "not checked" before an attempt is started.
 
-The callback is cancelled on close whenever the browser supports cancellation, and a session generation check ignores stale callbacks even if cancellation does not work. No frame dimensions, file paths, source URLs, filenames, raw media content, IP address or user agent are stored or exported.
+The callback is cancelled on close whenever the browser supports cancellation, and a session generation check ignores stale callbacks even if cancellation does not work.
+
+If the browser also reports a media decode, format or network error, the error remains the primary user-facing guidance even if a video-frame callback was observed. A frame callback never overrides a real playback failure. No frame dimensions, file paths, source URLs, filenames, raw media content, IP address or user agent are stored or exported.
 
 ## Privacy-safe diagnostics
 
