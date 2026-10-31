@@ -572,7 +572,8 @@ function gamepadLoop(now) {
   }
   if(pad) {
     const action=gamepadIntent(pad,{gameFocused:arcadeControlsActive() && modal.hidden});
-    if(action && (action!==lastPadAction || now>=nextPadActionAt)) {
+    const repeatable=["up","down","left","right"].includes(action);
+    if(action && (action!==lastPadAction || (repeatable && now>=nextPadActionAt))) {
       if(action==="exit-game") exitArcadeControls();
       else if(action==="back"){
         if(!modal.hidden)closePlayer();
@@ -595,7 +596,8 @@ function gamepadLoop(now) {
       }
       nextPadActionAt=now+(["select","back","exit-game"].includes(action)?400:185);
     }
-    lastPadAction=action;
+    // B must be released before it can exit the parent view after leaving a game.
+    lastPadAction=action==="exit-game"?"back":action;
   }else lastPadAction="";
   requestAnimationFrame(gamepadLoop);
 }
