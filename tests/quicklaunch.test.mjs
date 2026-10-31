@@ -76,6 +76,6 @@ test("all quick links require deliberate click; no provider scraping, telemetry 
  assert.match(app,/renderQuickResults/);
  assert.match(html,/data-view="quick"/);
  assert.match(sw,/src\/quicklaunch\.js/);
- assert.match(sw,/reel-theater-shell-v9/);
+ assert.match(sw,/reel-theater-shell-v10/);
  assert.doesNotMatch(sw,/https:\/\/(tubi|pluto|michaelwave369\.github\.io)/);
 });
