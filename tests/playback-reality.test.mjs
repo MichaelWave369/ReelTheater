@@ -27,6 +27,19 @@ test("playing events and frame callbacks are distinct signals",()=>{
   assert.equal(summary.videoFrameObservation,"observed");
   assert.equal(summary.events.length,1); // frame callback is not an HTMLMediaElement event
 });
+test("an actual decode or network error takes priority over a frame callback",()=>{
+  let s=createPlaybackSession({kind:"demo",started:100});
+  s=setVideoFrameObservation(s,"pending");
+  s=recordPlaybackEvent(s,"error",{now:200,errorCode:4});
+  s=recordVideoFrameCallback(s,{now:220,hasVideo:true});
+  assert.equal(s.videoFrameObservation,"observed");
+  assert.equal(s.firstVideoFrameMs,120);
+  assert.equal(s.error,"Media format/source not supported");
+  assert.match(playbackGuidance(s),/Try a supported MP4\/H\.264/);
+  s=recordPlaybackEvent(s,"error",{now:230,errorCode:2});
+  assert.match(playbackGuidance(s),/Check connectivity/);
+});
+
 test("callbacks do not falsify frame data when no video exists or state is inapplicable",()=>{
   const base=createPlaybackSession({kind:"local",started:0});
   assert.equal(base.videoFrameObservation,"not-checked");
