@@ -10,10 +10,10 @@ export function normalizeMode(value) {
   return UI_MODES.some(mode=>mode.id===value) ? value : "auto";
 }
 
-export function resolveMode(preference, {width=1200,coarse=false,touchPoints=0,gamepad=false}={}) {
+export function resolveMode(preference, {width=1200,coarse=false,touchPoints=0,gamepad=false,tvBrowser=false}={}) {
   const selected=normalizeMode(preference);
   if (selected!=="auto") return selected;
-  if (gamepad && width >= 850) return "tv";
+  if ((gamepad || tvBrowser) && width >= 850) return "tv";
   if (width <= 800) return "touch";
   if (coarse && width >= 1300 && touchPoints===0) return "tv";
   if (coarse || (touchPoints>0 && width <= 1250)) return "touch";
@@ -22,7 +22,7 @@ export function resolveMode(preference, {width=1200,coarse=false,touchPoints=0,g
 
 export function platformGuide({userAgent="",platform="",maxTouchPoints=0}={}) {
   const ua=String(userAgent), os=String(platform);
-  if (/Silk\/|AFT[A-Z0-9]*|Fire TV/i.test(ua)) return {
+  if (/AFT[A-Z0-9]*|Fire TV/i.test(ua)) return {
     id:"fire",title:"Fire TV / Fire Stick (Silk)",
     guidance:"Open REEL Theater in Silk, then use Silk's menu to bookmark the site. D-pad moves focus where Silk forwards arrow keys; center/Select activates. The remote may also move a browser cursor. Native app installation is not promised."
   };
@@ -49,5 +49,5 @@ export function isEditableTarget(target) {
   return target.matches("input, textarea, select, [contenteditable], [role='textbox']");
 }
 export function remoteBackKey(key) {
-  return ["Escape","Backspace","BrowserBack","GoBack"].includes(key);
+  return ["Escape","Backspace","BrowserBack","GoBack","Back"].includes(key);
 }
