@@ -1,5 +1,5 @@
 // Cache only REEL Theater's app shell, never streamed video or selected files.
-const CACHE = "reel-theater-shell-v6";
+const CACHE = "reel-theater-shell-v7";
 const SHELL = ["./", "./index.html", "./styles.css", "./src/app.js", "./src/arcade.js", "./src/sources.js", "./src/field.js", "./src/platform.js", "./src/games.js", "./src/playback.js", "./src/remote.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./favicon.svg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
