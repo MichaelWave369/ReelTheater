@@ -111,6 +111,19 @@ Xbox, Fire TV Silk, Android and iOS still need physical-device verification. Thi
 
 **Important:** a recent click means the user selected an external link, not that video played or a browser game successfully loaded.
 
+## Rung 10 (v0.10.0) — Portable Setup
+
+- Explicit **Settings → Move your setup**: Show JSON, download or copy a small versioned setup backup, and restore from a local file or pasted JSON
+- Move source favorites, game favorites, up to nine recent shortcut IDs and preferred layout between browsers without an account, sync server or tracking
+- Preview a backup first and choose **Merge** (keep current layout, combine favorites/recents) or **Replace** (use backup's selected favorites/recents/layout)
+- Strict REEL_PORTABLE_SETUP_V1 validation, 8 KB maximum, allowlisted catalog IDs, explicit disclosure of discarded unknown entries
+- Only four known localStorage keys are ever changed; Field Lab notes, demo progress, private media and device reports are intentionally not transferred
+- TV/mobile-friendly import and export controls, fallback pasteable JSON where downloads and clipboard are unavailable
+- Browser and Node acceptance for exports, merges, replacements, invalid/stale previews, file picker and offline app shell
+- [Portable Setup schema and privacy boundaries](docs/PORTABLE_SETUP_RUNG10.md)
+
+This is manual portability, **not** automatic syncing. Physical Xbox and Fire TV import/export workflows still require on-device testing.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -147,8 +160,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 6. **Rung 6:** Remote input ownership, TV focus and modal hardening (merged).
 7. **Rung 7:** Chromium profiles and browser-gated Pages deployments (merged).
 8. **Rung 8:** On-device input and frame pacing readiness lab (merged).
-9. **Rung 9:** Unified Quick Launch with existing favorites and private recent selections (this PR).
-10. **Rung 10:** Physical Fire TV/Xbox/mobile acceptance, measured UI improvements and optional native wrappers only if needed.
+9. **Rung 9:** Unified Quick Launch with shared favorites and recent selections (merged).
+10. **Rung 10:** Portable favorite and display settings backup/import (this PR).
+11. **Rung 11:** Physical Fire TV/Xbox/mobile acceptance, startup/playback improvements and native-wrapper decisions where genuinely necessary.
 
 ## Rights and scope
 
