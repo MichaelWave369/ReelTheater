@@ -56,7 +56,7 @@ test("oversized arrays and invalid structural fields never get accepted",()=>{
     recents:[],preferences:{mode:"auto"}});
   assert.equal(parsePortableSetup(raw).ok,false);
   assert.equal(tooMany.favorites.sources.length,1);
-  assert.equal(parsePortableSetup('["array"]'),null?.ok??false);
+  assert.equal(parsePortableSetup('["array"]').ok,false);
 });
 
 test("merge preserves this browser layout and recent precedence, replace uses imported layout",()=>{
