@@ -1,5 +1,6 @@
 import { startArcade } from "./arcade.js";
 import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from "./sources.js";
+import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,updateFieldEntry,fieldCounts,fieldMarkup} from "./field.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -8,7 +9,7 @@ const filePicker = document.getElementById("local-file");
 const toast = document.getElementById("toast");
 const SAMPLE_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const REEL_URL = "https://github.com/MichaelWave369/ReelCommons";
-const views = ["home", "watch", "live", "arcade", "library", "settings"];
+const views = ["home", "watch", "live", "arcade", "library", "field", "settings"];
 const launchedAt = performance.now();
 let view = "home";
 let arcadeCleanup = null;
@@ -47,6 +48,36 @@ function notify(message) {
 function reelLink(text) {
   return '<a href="' + REEL_URL + '" target="_blank" rel="noopener noreferrer" class="action secondary">' + text + '</a>';
 }
+function currentFieldReport() {
+  try { return parseFieldReport(window.localStorage.getItem(FIELD_KEY)); }
+  catch { return parseFieldReport(""); }
+}
+function storeFieldReport(report) {
+  try {
+    window.localStorage.setItem(FIELD_KEY, JSON.stringify(report));
+    return true;
+  } catch { notify("Browser storage unavailable. Download your field report before leaving."); return false; }
+}
+function updateFieldSummary(report) {
+  const counts = fieldCounts(report);
+  const progress = document.getElementById("field-progress");
+  const detail = document.getElementById("field-summary-detail");
+  if (progress) progress.textContent = counts.tested + " / " + counts.total + " checked";
+  if (detail) detail.textContent = counts.worked + " worked · " + counts.failed + " failed · " + counts.opened + " opened only";
+}
+function exportFieldReport() {
+  const report = currentFieldReport();
+  const blob = new Blob([JSON.stringify({...report, exportedAt:new Date().toISOString(), provenance:"Unverified manual local observations; not a compatibility certificate."}, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "reel-theater-xbox-field-report.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  notify("Download requested. If Xbox Edge blocked it, use screenshots or repeat on desktop.");
+}
 function sourceFavorites() {
   return parseFavoriteSourceIds(read("favorite-sources", "[]"));
 }
@@ -69,10 +100,12 @@ function renderSourceList() {
   if (count) count.textContent = results.length + ' of ' + SOURCES.length + ' official destinations shown';
   container.innerHTML = results.length ? results.map(source => {
     const saved = favoriteIds.includes(source.id);
+    const myResult = currentFieldReport().entries["source-"+source.id];
     return '<article class="source-card"><div class="source-card-top"><span class="source-icon" aria-hidden="true">' + source.name.slice(0,1) + '</span>' +
       '<div class="source-name"><h3>' + source.name + '</h3><span>' + source.label + '</span></div>' +
       '<button class="source-fav" data-source-favorite="' + source.id + '" aria-pressed="' + saved + '" aria-label="' + (saved ? "Remove " : "Save ") + source.name + (saved ? " from favorites" : " to favorites") + '">' + (saved ? "♥" : "♡") + '</button></div>' +
       '<p>' + source.description + '</p><div class="source-meta"><span>' + source.price + '</span><span>' + source.xbox + '</span></div>' +
+      '<span class="source-self-report">My device: ' + (myResult && myResult.status !== 'untested' ? FIELD_STATES.find(state=>state.id===myResult.status).label : 'Not tested') + '</span>' +
       '<a class="action secondary source-open" href="' + source.url + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + source.name + ' official site">Open official site ↗</a></article>';
   }).join("") : '<div class="source-empty"><strong>No matching services.</strong><p>Try another category or clear Favorites. No hidden repositories are being searched.</p></div>';
 }
@@ -91,7 +124,7 @@ function home() {
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
-    '<div class="feature-card"><div class="tag">Built for Xbox</div><h3>Controller-first</h3><p>Use the D-pad or left stick, A to select, B to go back. Keyboard and mouse also work.</p><button class="action secondary" data-view="settings">See controls</button></div></section>';
+    '<div class="feature-card"><div class="tag">Xbox field testing</div><h3>The Shayne Test</h3><p>Check which services and games actually work on your Series X, then download an honest report.</p><button class="action secondary" data-view="field">Open Field Lab</button></div></section>';
 }
 function watch() {
   return '<div class="page-heading"><div class="eyebrow">THE WATCH ROOM</div><h1>Pick something. Press play.</h1><p>A working player, without digging through repositories. The sample is hosted by MDN; local-file playback never uploads your media.</p></div>' +
@@ -114,7 +147,9 @@ function library() {
 function arcade() {
   return '<div class="page-heading"><div class="eyebrow">REEL ARCADE · ORIGINAL MINI-GAME</div><h1>Signal Breaker</h1><p>An actual playable paddle-and-orbs game, built into REEL Theater. Not a placeholder linking to a broken add-on. Works offline once the app shell is cached.</p></div>' +
     '<div class="arcade-stage"><canvas id="signal-breaker" width="960" height="540" aria-label="Signal Breaker arcade game" role="img"></canvas><div class="arcade-tools"><div class="actions"><button id="start-game" class="action">✧ Start / Restart</button><button data-view="home" class="action secondary">⌂ Home</button></div><p>← → / A D / left stick to move · A or Space to launch · B or Escape to leave</p></div></div>' +
-    '<p class="fineprint">This is an original in-browser mini-game. Break the Matrix and the rest of the game ecosystem are potential future arcade entries and must pass real Xbox controller tests first.</p>';
+    '<div class="section-heading"><div><h2>More from our arcade</h2><p>Original game launcher. Xbox Edge compatibility is still unverified.</p></div></div>' +
+    '<div class="feature-card"><div class="tag">Original game · Xbox Edge untested</div><h3>Break the Matrix</h3><p>Open the existing free browser FPS in a separate tab. Gameplay, controller input and performance must be checked on Shayne’s Xbox before marking it compatible.</p><a class="action secondary" href="' + FIELD_GAME_URL + '" target="_blank" rel="noopener noreferrer">Launch original game ↗</a><button class="action ghost" data-view="field">Record Xbox result</button></div>' +
+    '<p class="fineprint">Signal Breaker is a bundled original mini-game. External games are not embedded, proxied, or claimed to be Xbox tested.</p>';
 }
 function settings() {
   const online = navigator.onLine;
@@ -128,7 +163,7 @@ function settings() {
     '<div class="section-heading"><div><h2>Controls & recovery</h2></div></div>' +
     '<div class="info-panel"><p><strong>Xbox:</strong> D-pad or left stick moves focus. A selects. B returns Home or closes the player. In the arcade, horizontal controls move the paddle.</p><p><strong>Keyboard:</strong> Arrow keys move focus. Enter selects. Escape goes Home. Arcade: A/D or arrows, Space to launch.</p><p><strong>Playback issues:</strong> If the online demo fails, check the source connection, codec support, and Edge behavior. Browser DRM, SMB/NAS, USB scanning, and background IPTV recording are not supplied in this pilot.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
 }
-const pages = {home, watch, live, arcade, library, settings};
+const pages = {home, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), settings};
 function render() {
   if (arcadeCleanup) { arcadeCleanup(); arcadeCleanup = null; }
   main.innerHTML = pages[view]();
@@ -141,6 +176,10 @@ function render() {
   if (view === "arcade") arcadeCleanup = startArcade(document.getElementById("signal-breaker"), document.getElementById("start-game"));
   const search = document.getElementById("source-query");
   if (search) { search.value = sourceQuery; renderSourceList(); }
+  if (view === "field") {
+    const observations = currentFieldReport().entries;
+    document.querySelectorAll("[data-field-note]").forEach(el=>{el.value = observations[el.dataset.fieldNote]?.note || "";});
+  }
 }
 function setView(target) {
   if (!views.includes(target)) return;
@@ -200,6 +239,19 @@ filePicker.addEventListener("change", () => {
   filePicker.value = "";
 });
 document.getElementById("close-player").addEventListener("click", closePlayer);
+document.addEventListener("change", event => {
+  const element = event.target;
+  if (!element || !(element instanceof HTMLElement)) return;
+  const id = element.dataset.fieldStatus || element.dataset.fieldNote;
+  if (!id || !FIELD_TARGETS.some(target=>target.id===id)) return;
+  const old = currentFieldReport();
+  const patch = element.dataset.fieldStatus ? {status:element.value,at:new Date().toISOString()} : {note:element.value,at:new Date().toISOString()};
+  const updated = updateFieldEntry(old,id,patch);
+  storeFieldReport(updated);
+  updateFieldSummary(updated);
+  const indicator = Array.from(document.querySelectorAll("[data-field-indicator]")).find(el=>el.dataset.fieldIndicator===id);
+  if (indicator) indicator.textContent = FIELD_STATES.find(state=>state.id===(updated.entries[id]?.status || "untested")).label;
+});
 document.addEventListener("input", event => {
   if (event.target && event.target.id === "source-query") {
     sourceQuery = event.target.value.slice(0, 80);
@@ -210,6 +262,8 @@ document.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.view) { setView(button.dataset.view); return; }
+  if (button.dataset.fieldLaunch === "demo") { showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true); return; }
+  if (button.dataset.fieldLaunch === "signal") { setView("arcade"); return; }
   if (button.dataset.sourceCategory) {
     sourceCategory = button.dataset.sourceCategory;
     document.querySelectorAll("[data-source-category]").forEach(el => {
@@ -239,6 +293,7 @@ document.addEventListener("click", event => {
     return;
   }
   const action = button.dataset.action;
+  if (action === "export-field") { exportFieldReport(); return; }
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
   if (action === "file") filePicker.click();
   if (action === "favorite") { save("favorite-demo", read("favorite-demo") === "yes" ? "no" : "yes"); render(); }
