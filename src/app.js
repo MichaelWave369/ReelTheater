@@ -4,6 +4,7 @@ import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,upd
 import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remoteBackKey} from "./platform.js";
 import {GAMES,GAME_CATEGORIES,filterGames,parseGameFavorites} from "./games.js";
 import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGuidance} from "./playback.js";
+import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} from "./remote.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -31,6 +32,8 @@ let gameFavoritesOnly = false;
 let playbackSession = createPlaybackSession();
 let installPrompt = null;
 let currentMode = "desktop";
+let playerOpener = null;
+const appShell = document.querySelector(".app-shell");
 
 function read(key, fallback = "") {
   try { return window.localStorage.getItem("reel-theater:" + key) ?? fallback; }
@@ -256,7 +259,7 @@ function library() {
 }
 function arcade() {
   return '<div class="page-heading"><div class="eyebrow">REEL ARCADE · ORIGINAL GAMES</div><h1>Play first. Configure never.</h1><p>Signal Breaker is bundled and playable from the offline shell. Our other browser games open in their own websites, without installing a Kodi add-on.</p></div>' +
-    '<div class="arcade-stage"><canvas id="signal-breaker" width="960" height="540" aria-label="Signal Breaker arcade game" role="img"></canvas><div class="arcade-tools"><div class="actions"><button id="start-game" class="action">✧ Start / Restart</button><button data-view="home" class="action secondary">⌂ Home</button></div><p>← → / A D / left stick to move · A or Space to launch · B or Escape to leave</p></div></div>' +
+    '<div class="arcade-stage"><canvas id="signal-breaker" width="960" height="540" tabindex="0" aria-label="Signal Breaker game controls. Enter or A to launch; left and right to play; B or Escape to return to menus."></canvas><div class="arcade-tools"><div class="actions"><button id="start-game" class="action">✧ Start / Restart</button><button data-view="home" class="action secondary">⌂ Home</button></div><p id="arcade-control-status" aria-live="polite">Select Start to play. Focus the game canvas for controls; B or Escape returns to the menu.</p></div></div>' +
     gameSection();
 }
 
@@ -314,10 +317,11 @@ function setView(target) {
   if (window.location.hash !== "#" + target) window.location.hash = target;
   render();
   const first = main.querySelector("button, a[href]");
-  if (first) first.focus({preventScroll:true});
+  if (first) focusAndReveal(first);
 }
 function showPlayer(title, url, isSample, resume = false) {
   closePlayer();
+  playerOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   samplePlaying = isSample;
   playbackSession = createPlaybackSession({kind:isSample?"demo":"local",started:performance.now()});
   renderPlaybackHealth();
@@ -326,6 +330,7 @@ function showPlayer(title, url, isSample, resume = false) {
     "CC0 demonstration stream hosted by MDN. Requires a network connection and supported browser codec." :
     "This local file stays on your device. Playback depends on browser access and codec support.";
   modal.hidden = false;
+  if (appShell) appShell.inert = true;
   player.src = url;
   player.load();
   if (isSample && resume && safeProgress() > 0) {
@@ -338,13 +343,21 @@ function showPlayer(title, url, isSample, resume = false) {
   document.getElementById("close-player").focus();
 }
 function closePlayer() {
+  const wasOpen=!modal.hidden;
+  modal.hidden=true;
+  if (appShell) appShell.inert=false;
   player.pause();
   player.removeAttribute("src");
   player.load();
-  modal.hidden = true;
-  samplePlaying = false;
-  if (localMediaUrl) { URL.revokeObjectURL(localMediaUrl); localMediaUrl = null; }
+  samplePlaying=false;
+  if (localMediaUrl) { URL.revokeObjectURL(localMediaUrl); localMediaUrl=null; }
+  if (wasOpen) {
+    const target=playerOpener?.isConnected && !playerOpener.closest("[inert]") ? playerOpener : document.querySelector("#primary-nav .active");
+    playerOpener=null;
+    if (target) focusAndReveal(target);
+  }
 }
+
 for (const name of ["loadstart","loadedmetadata","canplay","playing","waiting","stalled","error","ended","pause","seeking","seeked"]) {
   player.addEventListener(name,()=>{
     if (modal.hidden) return;
@@ -490,75 +503,105 @@ window.addEventListener("hashchange", () => {
   const target = window.location.hash.slice(1);
   if (views.includes(target) && target !== view) setView(target);
 });
-function spatialFocus(direction) {
-  const elements = Array.from(document.querySelectorAll("#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled), main textarea:not(:disabled), .topbar button"))
-    .filter(el => el.getClientRects().length > 0);
-  if (!elements.length) return;
-  const current = document.activeElement;
-  if (!elements.includes(current)) { elements[0].focus(); return; }
-  const src = current.getBoundingClientRect();
-  const sx = src.left + src.width / 2, sy = src.top + src.height / 2;
-  const possible = elements.map(el => {
-    if (el === current) return null;
-    const r = el.getBoundingClientRect(), dx = r.left + r.width / 2 - sx, dy = r.top + r.height / 2 - sy;
-    const primary = direction === "left" ? -dx : direction === "right" ? dx : direction === "up" ? -dy : dy;
-    const secondary = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
-    if (primary < 8 || secondary > primary * 3 + 140) return null;
-    return {el, score:primary + secondary * 1.4};
-  }).filter(Boolean).sort((a,b) => a.score - b.score);
-  if (possible[0]) possible[0].el.focus();
+function focusAndReveal(element) {
+  if (!element || typeof element.focus!=="function") return;
+  element.focus({preventScroll:true});
+  if (typeof element.scrollIntoView==="function") element.scrollIntoView({block:"nearest",inline:"nearest"});
 }
+function arcadeControlsActive() {
+  return view==="arcade" && document.activeElement===document.getElementById("signal-breaker");
+}
+function exitArcadeControls() {
+  if (!arcadeControlsActive()) return;
+  const start=document.getElementById("start-game");
+  if (start) focusAndReveal(start);
+  const hint=document.getElementById("arcade-control-status");
+  if (hint) hint.textContent="Game controls released. Use the remote to browse games, or press Start to return.";
+}
+function visibleControls(root,selector) {
+  return Array.from(root.querySelectorAll(selector)).filter(el=>el.getClientRects().length>0 && !el.closest("[hidden]"));
+}
+function spatialFocus(direction,root=document,selector=FOCUSABLE_SELECTOR) {
+  const elements=visibleControls(root,selector);
+  if(!elements.length)return;
+  const current=elements.indexOf(document.activeElement);
+  const targetIndex=pickSpatialIndex(elements.map(el=>el.getBoundingClientRect()),current,direction);
+  if(targetIndex>=0)focusAndReveal(elements[targetIndex]);
+}
+function modalFocusables() {
+  return visibleControls(modal,"button:not(:disabled),video[controls]");
+}
+function trapModalTab(event) {
+  const controls=modalFocusables();
+  if(!controls.length) {event.preventDefault();return;}
+  const index=controls.indexOf(document.activeElement);
+  if(index<0){event.preventDefault();focusAndReveal(controls[0]);return;}
+  if(event.shiftKey && index===0){event.preventDefault();focusAndReveal(controls[controls.length-1]);}
+  else if(!event.shiftKey && index===controls.length-1){event.preventDefault();focusAndReveal(controls[0]);}
+}
+
 document.addEventListener("keydown", event => {
-  if (isEditableTarget(event.target)) return;
   if (!modal.hidden) {
-    if (remoteBackKey(event.key)) { event.preventDefault(); closePlayer(); }
-    else if (event.key === "MediaPlayPause") { event.preventDefault(); if (player.paused) player.play().catch(()=>{}); else player.pause(); }
+    if (event.key==="Tab") {trapModalTab(event);return;}
+    if (remoteBackKey(event.key)) {event.preventDefault();closePlayer();return;}
+    if (event.key==="MediaPlayPause") {
+      event.preventDefault();
+      if (player.paused) player.play().catch(()=>notify("Playback unavailable."));
+      else player.pause();
+    }
     return;
   }
-  if (view === "arcade" && ["ArrowLeft","ArrowRight"," ","a","d","A","D"].includes(event.key)) return;
-  const directions = {ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};
-  if (directions[event.key]) { event.preventDefault(); spatialFocus(directions[event.key]); }
-  else if (remoteBackKey(event.key) && view !== "home") { event.preventDefault(); setView("home"); }
-});
-function gamepadLoop(now) {
-  const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-  const pad = pads[0];
-  const connected = !!pad;
-  if (connected !== controllerWasConnected) {
-    document.getElementById("controller-status").textContent = connected ? "Controller connected" : "Keyboard / Remote";
-    controllerWasConnected = connected;
-    if (normalizeMode(read("display-mode","auto"))==="auto") applyMode();
+  if (arcadeControlsActive()) {
+    if (remoteBackKey(event.key)) {event.preventDefault();exitArcadeControls();return;}
+    if (isArcadeControlKey(event.key)) return; // Signal Breaker owns the game keys.
   }
-  if (pad) {
-    let action = "";
-    const pressed = i => !!(pad.buttons[i] && pad.buttons[i].pressed);
-    if (pressed(1)) action = "back";
-    else if (pressed(0)) action = "select";
-    else if (view !== "arcade" && modal.hidden) {
-      if (pressed(12) || (pad.axes[1] || 0) < -.6) action = "up";
-      else if (pressed(13) || (pad.axes[1] || 0) > .6) action = "down";
-      else if (pressed(14) || (pad.axes[0] || 0) < -.6) action = "left";
-      else if (pressed(15) || (pad.axes[0] || 0) > .6) action = "right";
+  if (isEditableTarget(event.target)) return;
+  const directions={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};
+  if(directions[event.key]) {event.preventDefault();spatialFocus(directions[event.key]);}
+  else if(remoteBackKey(event.key) && view!=="home") {event.preventDefault();setView("home");}
+});
+
+function gamepadLoop(now) {
+  const pads=navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  const pad=pads[0];
+  const connected=Boolean(pad);
+  if(connected!==controllerWasConnected) {
+    document.getElementById("controller-status").textContent=connected?"Controller connected":"Keyboard / Remote";
+    controllerWasConnected=connected;
+    if(normalizeMode(read("display-mode","auto"))==="auto")applyMode();
+  }
+  if(pad) {
+    const action=gamepadIntent(pad,{gameFocused:arcadeControlsActive() && modal.hidden});
+    const repeatable=["up","down","left","right"].includes(action);
+    if(action && (action!==lastPadAction || (repeatable && now>=nextPadActionAt))) {
+      if(action==="exit-game") exitArcadeControls();
+      else if(action==="back"){
+        if(!modal.hidden)closePlayer();
+        else if(view!=="home")setView("home");
+      } else if(action==="select"){
+        if(!modal.hidden){
+          if(document.activeElement instanceof HTMLElement && modal.contains(document.activeElement) && document.activeElement.matches("button"))document.activeElement.click();
+          else if(player.paused)player.play().catch(()=>notify("Playback unavailable."));
+          else player.pause();
+        } else if(document.activeElement instanceof HTMLSelectElement && document.activeElement.dataset.fieldStatus){
+          const select=document.activeElement;
+          select.selectedIndex=(select.selectedIndex+1)%select.options.length;
+          select.dispatchEvent(new Event("change",{bubbles:true}));
+        } else if(document.activeElement instanceof HTMLElement && document.activeElement.matches("button,a[href],input,textarea,select")){
+          document.activeElement.click();
+        } else spatialFocus("right");
+      } else if(["up","down","left","right"].includes(action)){
+        if(!modal.hidden)spatialFocus(action,modal,"button:not(:disabled),video[controls]");
+        else spatialFocus(action);
+      }
+      nextPadActionAt=now+(["select","back","exit-game"].includes(action)?400:185);
     }
-    if (action && (action !== lastPadAction || now >= nextPadActionAt)) {
-      if (action === "back") { if (!modal.hidden) closePlayer(); else if (view !== "home") setView("home"); }
-      else if (action === "select" && modal.hidden) {
-        if (view !== "arcade") {
-          if (document.activeElement instanceof HTMLSelectElement && document.activeElement.dataset.fieldStatus) {
-            const select = document.activeElement;
-            select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
-            select.dispatchEvent(new Event("change",{bubbles:true}));
-          }
-          else if (document.activeElement instanceof HTMLElement && document.activeElement.matches("button, a[href], input, textarea")) document.activeElement.click();
-          else spatialFocus("right");
-        }
-      } else if (["up","down","left","right"].includes(action)) spatialFocus(action);
-      nextPadActionAt = now + (action === "select" || action === "back" ? 400 : 185);
-    }
-    lastPadAction = action;
-  } else lastPadAction = "";
+    // B must be released before it can exit the parent view after leaving a game.
+    lastPadAction=action==="exit-game"?"back":action;
+  }else lastPadAction="";
   requestAnimationFrame(gamepadLoop);
 }
+
 const target = window.location.hash.slice(1);
 if (views.includes(target)) view = target;
 if (view === "live") sourceCategory = "live";

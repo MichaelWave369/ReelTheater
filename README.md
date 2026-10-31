@@ -63,6 +63,17 @@ One PWA-capable web application across TV browsers, mobile, tablet and desktop, 
 
 See [Rung 5 engineering and field checklist](docs/ARCADE_PLAYBACK.md) for provenance and device test requirements.
 
+## Rung 6 (v0.6.0) — TV Remote and Focus Hardening
+
+- Dedicated, unit-tested directional navigation with automatic scroll-to-focused-card
+- Signal Breaker takes keyboard/gamepad input **only while the game canvas has focus**; otherwise D-pad, stick and arrow keys operate the menus
+- Clear, keyboard-focusable Start/Restart path; B or Escape leaves game controls, with button-release protection against accidentally exiting two screens at once
+- Video modal traps Tab focus, disables background interactions while open, and restores the originating button after close
+- Remote play/pause and focus behavior refined without changing browser codec or external streaming assumptions
+- Zero-dependency local module and updated offline cache; detailed [remote acceptance checklist](docs/REMOTE_FOCUS_RUNG6.md)
+
+Physical Xbox/Fire TV remote testing is still required. Passing software tests cannot certify device input routing.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -95,8 +106,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 2. **Rung 2:** Official discovery, filtering and favorites (merged).
 3. **Rung 3:** Manual Xbox field reports and original-game launcher (merged).
 4. **Rung 4:** Multi-device web shell and PWA assets (merged).
-5. **Rung 5:** Curated original-game library and local playback diagnostics (this PR).
-6. **Rung 6:** Real Fire TV/Xbox/mobile acceptance, then consider packaged Android/Fire TV wrapper only if browser behavior requires it.
+5. **Rung 5:** Curated original-game library and playback diagnostics (merged).
+6. **Rung 6:** Remote input ownership, TV focus and player modal hardening (this PR).
+7. **Rung 7:** Real Fire TV/Xbox/mobile field acceptance and performance work, then evaluate native wrappers only if needed.
 
 ## Rights and scope
 
