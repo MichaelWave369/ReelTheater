@@ -20,7 +20,7 @@ test("real browser renders shell and expected responsive layout",async({page},te
   page.on("pageerror",error=>errors.push(error.message));
   await openApp(page);
   await expect(page.locator("html")).toHaveAttribute("data-ui-mode",expectedLayout(testInfo.project.name));
-  await expect(page.locator("#primary-nav button")).toHaveCount(7);
+  await expect(page.locator("#primary-nav button")).toHaveCount(8);
   await expect(page.locator("#connection-status")).toBeVisible();
   await page.screenshot({path:"test-results/"+testInfo.project.name+"-home.png",fullPage:true});
   expect(errors,errors.join("\n")).toEqual([]);
