@@ -623,6 +623,6 @@ window.addEventListener("appinstalled",()=>{
   if (button) button.hidden=true;
 });
 requestAnimationFrame(gamepadLoop);
-if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+if ("serviceWorker" in navigator && (window.location.protocol === "https:" || ["localhost","127.0.0.1"].includes(window.location.hostname))) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
