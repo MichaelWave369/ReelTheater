@@ -1,7 +1,7 @@
 // Deterministic, testable directional navigation for TV/remote controls.
 // Geometry inputs are plain objects so it works without a DOM or third-party library.
 export const FOCUSABLE_SELECTOR =
-  "#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled), main textarea:not(:disabled), .topbar button";
+  "#primary-nav button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled), main textarea:not(:disabled), main canvas[tabindex], .topbar button";
 
 export function rectCenter(rect) {
   if (!rect || ![rect.left,rect.top,rect.width,rect.height].every(Number.isFinite)) return null;
