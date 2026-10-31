@@ -124,6 +124,19 @@ Xbox, Fire TV Silk, Android and iOS still need physical-device verification. Thi
 
 This is manual portability, **not** automatic syncing. Physical Xbox and Fire TV import/export workflows still require on-device testing.
 
+## Rung 11 (v0.11.0) — Runtime Responsiveness
+
+- Stop checking for disconnected gamepads every animation frame. Idle browsers use a slower controller probe; connected controllers or active input tests retain frame-speed input polling
+- Gamepad connection/disconnection and tab-visibility events wake the polling scheduler immediately
+- Selecting the already-open app tab preserves its search field and DOM, instead of restarting a running arcade or rebuilding the same screen
+- **Device Lab → Screen redraw diagnostics** shows up to 24 local JavaScript DOM redraw measurements (last, median, p95, worst), clearable and in-memory only
+- No hardware FPS, startup-speed or streaming-playback claims. The redraw clock excludes visual paint and end-to-end input latency
+- New Node and multi-profile Chromium acceptance tests for idle polling, controller wake-up, active-tab preservation and the local readout
+- Offline shell v11 includes the new first-party performance module; no third-party stream or game caching
+- [Rung 11 implementation and test notes](docs/RUNTIME_RESPONSIVENESS_RUNG11.md)
+
+Actual Fire TV Silk, Xbox Edge and mobile hardware validation still matters. We are reducing unnecessary work while keeping honest measurements of what the browser can actually report.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -161,8 +174,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 7. **Rung 7:** Chromium profiles and browser-gated Pages deployments (merged).
 8. **Rung 8:** On-device input and frame pacing readiness lab (merged).
 9. **Rung 9:** Unified Quick Launch with shared favorites and recent selections (merged).
-10. **Rung 10:** Portable favorite and display settings backup/import (this PR).
-11. **Rung 11:** Physical Fire TV/Xbox/mobile acceptance, startup/playback improvements and native-wrapper decisions where genuinely necessary.
+10. **Rung 10:** Portable setup backup/import (merged).
+11. **Rung 11:** Runtime responsiveness, adaptive input polling and in-session UI timing (this PR).
+12. **Rung 12:** Physical Fire TV/Xbox/mobile acceptance, playback/first-frame investigations and native-wrapper decisions only if needed.
 
 ## Rights and scope
 
