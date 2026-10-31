@@ -141,3 +141,14 @@ html[data-ui-mode="tv"] .game-card p{font-size:16px}
 html[data-ui-mode="tv"] .game-card .game-open{min-height:60px}
 html[data-ui-mode="touch"] .game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:760px){html[data-ui-mode="touch"] .game-grid{grid-template-columns:1fr}}
+
+/* Rung 6: explicit game focus, visible TV controls, accessible modal focus. */
+#signal-breaker{outline:0;touch-action:pan-y}
+#signal-breaker:focus-visible{outline:4px solid #aef1ff;outline-offset:5px}
+#arcade-control-status{color:#cbd8f0;font-weight:600;font-size:13px;max-width:490px}
+.player-modal :is(button,video):focus-visible{outline:4px solid #aef1ff;outline-offset:4px}
+.player-modal video{display:block}
+.player-box{max-height:calc(100vh - 36px);overflow-y:auto;overscroll-behavior:contain;padding:8px}
+html[data-ui-mode="tv"] #arcade-control-status{font-size:16px}
+html[data-ui-mode="touch"] #arcade-control-status{font-size:12px}
+@media(prefers-reduced-motion:reduce){:is(.action,.tile,.feature-card,.game-card){transition:none!important;transform:none!important}}
