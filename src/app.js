@@ -1,6 +1,7 @@
 import { startArcade } from "./arcade.js";
 import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from "./sources.js";
 import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,updateFieldEntry,fieldCounts,fieldMarkup} from "./field.js";
+import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remoteBackKey} from "./platform.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -22,6 +23,8 @@ let toastTimer;
 let sourceCategory = "all";
 let sourceQuery = "";
 let sourceFavoritesOnly = false;
+let installPrompt = null;
+let currentMode = "desktop";
 
 function read(key, fallback = "") {
   try { return window.localStorage.getItem("reel-theater:" + key) ?? fallback; }
@@ -30,6 +33,28 @@ function read(key, fallback = "") {
 function save(key, value) {
   try { window.localStorage.setItem("reel-theater:" + key, String(value)); return true; }
   catch { return false; }
+}
+function presentationHints() {
+  return {
+    width: window.innerWidth || 1024,
+    coarse: Boolean(window.matchMedia && window.matchMedia("(pointer: coarse)").matches),
+    touchPoints: navigator.maxTouchPoints || 0,
+    gamepad: controllerWasConnected,
+    tvBrowser: /AFT[A-Z0-9]*|Fire TV|Xbox/i.test(navigator.userAgent || "")
+  };
+}
+function applyMode() {
+  const selected=normalizeMode(read("display-mode","auto"));
+  currentMode=resolveMode(selected,presentationHints());
+  document.documentElement.dataset.uiMode=currentMode;
+  document.documentElement.dataset.uiPreference=selected;
+  const label=document.getElementById("effective-display");
+  if (label) label.textContent="Active layout: "+currentMode.toUpperCase();
+  return currentMode;
+}
+function updateConnection() {
+  const el=document.getElementById("connection-status");
+  if (el) el.textContent=navigator.onLine ? "Online · live sources require internet" : "Offline · saved shell only";
 }
 function safeProgress() {
   const position = Number(read("demo-position", "0"));
@@ -152,17 +177,27 @@ function arcade() {
     '<p class="fineprint">Signal Breaker is a bundled original mini-game. External games are not embedded, proxied, or claimed to be Xbox tested.</p>';
 }
 function settings() {
-  const online = navigator.onLine;
-  const gamepad = !!(navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean));
-  const boot = Math.round(performance.now() - launchedAt);
-  return '<div class="page-heading"><div class="eyebrow">SETTINGS & HEALTH</div><h1>Know what works.</h1><p>No hidden diagnostics, no account, no misleading green indicators. These observations are from this browser session only.</p></div>' +
-    '<section class="status-grid"><div class="status-block"><h3>Controller input</h3><p>' + (gamepad ? 'Gamepad detected. Press A to select and B to return.' : 'No gamepad currently detected. Press a controller button, or use keyboard/mouse.') + '</p></div>' +
-    '<div class="status-block"><h3>Network</h3><p>Browser reports ' + (online ? 'online' : 'offline') + '. This does not prove that an external stream is playable.</p></div>' +
-    '<div class="status-block"><h3>Initial app startup</h3><p>' + boot + ' ms elapsed since page navigation to this settings view. Not a device-wide performance benchmark.</p></div>' +
-    '<div class="status-block"><h3>Privacy and persistence</h3><p>Demo progress, source favorites and your optional Xbox Field Lab notes use local browser storage. Downloaded reports require an explicit click. No data is uploaded by REEL Theater.</p></div></section>' +
+  const online=navigator.onLine;
+  const gamepad=Boolean(navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean));
+  const guide=platformGuide({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints||0});
+  const currentPreference=normalizeMode(read("display-mode","auto"));
+  return '<div class="page-heading"><div class="eyebrow">EVERY SCREEN · SETTINGS</div><h1>Make it yours.</h1><p>One web app, different ways to use it. Pick a remote-friendly TV layout or a touch layout, or let REEL choose based on available input hints.</p></div>' +
+    '<section class="setup-card"><div><div class="eyebrow">PRESENTATION</div><h2>Choose your layout</h2><p>Changes apply immediately, only on this browser. No account or server preferences.</p></div>' +
+    '<label class="layout-choice" for="layout-mode">Interface mode<select id="layout-mode">' + UI_MODES.map(item=>'<option value="'+item.id+'"'+(currentPreference===item.id?" selected":"")+'>'+item.label+'</option>').join("") + '</select></label>' +
+    '<p class="layout-effective" id="effective-display">Active layout: '+currentMode.toUpperCase()+'</p></section>' +
+    '<div class="section-heading"><div><h2>Open or install</h2><p>A home-screen shortcut is optional. REEL works as a normal website too.</p></div></div>' +
+    '<section class="setup-card"><div class="eyebrow">DEVICE GUIDANCE · NOT A COMPATIBILITY CERTIFICATE</div><h3>'+guide.title+'</h3><p>'+guide.guidance+'</p>' +
+    '<div class="actions"><button id="install-pwa" data-action="install-pwa" class="action"'+(installPrompt?"":' hidden')+'>Install REEL Theater</button><button class="action secondary" data-view="field">Open device test lab</button></div>' +
+    '<p class="fineprint">An Install button is shown only when the current browser actually offers an installation prompt. Fire TV Silk and Xbox Edge may support bookmarking without offering installation. Installing does not guarantee remote input or media codecs.</p></section>' +
+    '<div class="section-heading"><div><h2>Environment & privacy</h2></div></div>' +
+    '<section class="status-grid"><div class="status-block"><h3>Input</h3><p>'+(gamepad?'Gamepad reported by browser.':'No gamepad currently reported.')+' Keyboard arrows and Enter also work where the browser forwards them.</p></div>' +
+    '<div class="status-block"><h3>Connection</h3><p>Browser reports '+(online?'online':'offline')+'. This is not a test of third-party streaming availability.</p></div>' +
+    '<div class="status-block"><h3>Offline app shell</h3><p>'+(navigator.serviceWorker?.controller?'Service worker currently controls this page.':'Not currently controlled by a service worker; offline use is not yet confirmed.')+' External videos and providers are never cached.</p></div>' +
+    '<div class="status-block"><h3>Local-only data</h3><p>Demo progress, source favorites, preferred layout and optional Field Lab notes use browser storage. No telemetry or automatic uploads.</p></div></section>' +
     '<div class="section-heading"><div><h2>Controls & recovery</h2></div></div>' +
-    '<div class="info-panel"><p><strong>Xbox:</strong> D-pad or left stick moves focus. A selects. B returns Home or closes the player. In the arcade, horizontal controls move the paddle.</p><p><strong>Keyboard:</strong> Arrow keys move focus. Enter selects. Escape goes Home. Arcade: A/D or arrows, Space to launch.</p><p><strong>Playback issues:</strong> If the online demo fails, check the source connection, codec support, and Edge behavior. Browser DRM, SMB/NAS, USB scanning, and background IPTV recording are not supplied in this pilot.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
+    '<div class="info-panel"><p><strong>TV / Fire remote:</strong> D-pad or arrow keys navigate if delivered by the browser; center or Enter selects. Back or Escape returns Home. Some TV browsers use their own cursor instead of key navigation.</p><p><strong>Xbox gamepad:</strong> D-pad or left stick navigates; A selects; B returns Home or closes player. Arcade uses horizontal input.</p><p><strong>Touch:</strong> use bottom navigation, tap cards, scroll naturally, and use on-screen keyboard for search.</p><p><strong>Playback:</strong> Commercial DRM and SMB/USB library browsing still require authorized supported apps or future native/media-server integration.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
 }
+
 const pages = {home, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), settings};
 function render() {
   if (arcadeCleanup) { arcadeCleanup(); arcadeCleanup = null; }
@@ -180,6 +215,8 @@ function render() {
     const observations = currentFieldReport().entries;
     document.querySelectorAll("[data-field-note]").forEach(el=>{el.value = observations[el.dataset.fieldNote]?.note || "";});
   }
+  applyMode();
+  updateConnection();
 }
 function setView(target) {
   if (!views.includes(target)) return;
@@ -242,6 +279,12 @@ document.getElementById("close-player").addEventListener("click", closePlayer);
 document.addEventListener("change", event => {
   const element = event.target;
   if (!element || !(element instanceof HTMLElement)) return;
+  if (element.id === "layout-mode") {
+    const mode=normalizeMode(element.value);
+    save("display-mode",mode);
+    applyMode();
+    return;
+  }
   const id = element.dataset.fieldStatus || element.dataset.fieldNote;
   if (!id || !FIELD_TARGETS.some(target=>target.id===id)) return;
   const old = currentFieldReport();
@@ -293,6 +336,17 @@ document.addEventListener("click", event => {
     return;
   }
   const action = button.dataset.action;
+  if (action === "install-pwa" && installPrompt) {
+    const prompt=installPrompt;
+    installPrompt=null;
+    // Must happen directly in the user activation handler.
+    prompt.prompt();
+    Promise.resolve(prompt.userChoice).then(result=>{
+      if (result?.outcome !== "accepted") notify("Install dismissed. REEL still works in your browser.");
+    }).catch(()=>notify("Browser installation did not complete."));
+    button.hidden=true;
+    return;
+  }
   if (action === "export-field") { exportFieldReport(); return; }
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
   if (action === "file") filePicker.click();
@@ -323,15 +377,16 @@ function spatialFocus(direction) {
   if (possible[0]) possible[0].el.focus();
 }
 document.addEventListener("keydown", event => {
-  if (event.target && event.target.matches("input, select, textarea")) return;
+  if (isEditableTarget(event.target)) return;
   if (!modal.hidden) {
-    if (event.key === "Escape") { event.preventDefault(); closePlayer(); }
+    if (remoteBackKey(event.key)) { event.preventDefault(); closePlayer(); }
+    else if (event.key === "MediaPlayPause") { event.preventDefault(); if (player.paused) player.play().catch(()=>{}); else player.pause(); }
     return;
   }
   if (view === "arcade" && ["ArrowLeft","ArrowRight"," ","a","d","A","D"].includes(event.key)) return;
   const directions = {ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};
   if (directions[event.key]) { event.preventDefault(); spatialFocus(directions[event.key]); }
-  else if (event.key === "Escape" && view !== "home") { event.preventDefault(); setView("home"); }
+  else if (remoteBackKey(event.key) && view !== "home") { event.preventDefault(); setView("home"); }
 });
 function gamepadLoop(now) {
   const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
@@ -340,6 +395,7 @@ function gamepadLoop(now) {
   if (connected !== controllerWasConnected) {
     document.getElementById("controller-status").textContent = connected ? "Controller connected" : "Keyboard / Remote";
     controllerWasConnected = connected;
+    if (normalizeMode(read("display-mode","auto"))==="auto") applyMode();
   }
   if (pad) {
     let action = "";
@@ -375,6 +431,22 @@ const target = window.location.hash.slice(1);
 if (views.includes(target)) view = target;
 if (view === "live") sourceCategory = "live";
 render();
+window.addEventListener("resize",()=>{
+  if (normalizeMode(read("display-mode","auto"))==="auto") applyMode();
+});
+window.addEventListener("online",updateConnection);
+window.addEventListener("offline",updateConnection);
+window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  installPrompt=event;
+  const button=document.getElementById("install-pwa");
+  if (button) button.hidden=false;
+});
+window.addEventListener("appinstalled",()=>{
+  installPrompt=null;
+  const button=document.getElementById("install-pwa");
+  if (button) button.hidden=true;
+});
 requestAnimationFrame(gamepadLoop);
 if ("serviceWorker" in navigator && window.location.protocol === "https:") {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));

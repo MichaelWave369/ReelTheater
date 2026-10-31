@@ -38,15 +38,30 @@ For source policy, official reference pages and Xbox acceptance, see [Source Dis
 
 See [Xbox Field Lab](docs/XBOX_FIELD_LAB.md) for the hardware acceptance process. CI passing does not mean a game or provider has been verified on Xbox.
 
+## Rung 4 (v0.4.0) — Every Screen
+
+One PWA-capable web application across TV browsers, mobile, tablet and desktop, rather than five native forks:
+
+- Explicit Auto / TV remote / Phone-tablet / Desktop presentation profiles
+- TV-sized focus targets and keyboard/Fire TV back handling, responsive touch-first bottom navigation, safe-area support
+- Real PWA manifest, locally generated PNG icons (192 and 512), standalone install option *when offered by the browser*
+- Fire TV Silk and Xbox browser bookmark guidance, iPhone/iPad home-screen guidance, Android/desktop optional install guidance
+- Versioned offline cache for the **app shell only**, never provider video or third-party sites
+- Completely dependency-free Node build and browser JavaScript; no remote fonts or startup APIs
+- Dedicated multi-device contract tests and [field matrix](docs/DEVICE_MATRIX.md)
+
+**Important:** Xbox Edge, Fire TV Silk and iOS installation/remote behavior are device-test candidates, not verified capabilities. Browser launch is the baseline; no native Fire TV/Android package is shipped.
+
 ## Run locally
 
-Use a static HTTP server in the repository root:
+Build the deployable site with its real PWA icons, then serve the generated static folder:
 
 ~~~sh
-python -m http.server 8000
+npm run build
+python -m http.server 8000 --directory dist
 ~~~
 
-Visit http://localhost:8000. Most browsers require localhost or HTTPS for service workers.
+Visit http://localhost:8000. The production Pages deployment uses HTTPS. Icons are generated in dist during build; serving the raw repository root will not supply the generated PNG icons.
 
 ## Test and deploy
 
@@ -67,8 +82,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 
 1. **Rung 1:** Controller-first shell, sample and selected media playback, original arcade game (merged).
 2. **Rung 2:** Official discovery, filtering and favorites (merged).
-3. **Rung 3:** Private, manual Xbox field reports and unverified original-game launcher (this PR).
-4. **Rung 4:** Investigate supported Xbox native app, authorized media-server access, EPG and DVR.
+3. **Rung 3:** Manual Xbox field reports and original-game launcher (merged).
+4. **Rung 4:** Multi-device adaptive web shell and installable-PWA assets (this PR).
+5. **Rung 5:** Real Fire TV/Xbox/mobile field validation and optionally a packaged Android/Fire TV wrapper if browser compatibility is insufficient.
 
 ## Rights and scope
 
