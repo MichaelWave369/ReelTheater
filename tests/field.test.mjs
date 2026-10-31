@@ -71,7 +71,7 @@ test("field launcher has controller routes, JSON export and local-only storage",
   assert.match(app,/HTMLSelectElement/);
   assert.match(app,/select.dispatchEvent\(new Event\("change"/);
   assert.match(app,/FIELD_GAME_URL/);
-  assert.match(sw,/reel-theater-shell-v8/);
+  assert.match(sw,/reel-theater-shell-v9/);
   assert.match(sw,/src\/field\.js/);
   assert.doesNotMatch(sw,/BTM\/|michaelwave369\.github\.io/);
 });
