@@ -39,7 +39,8 @@ function presentationHints() {
     width: window.innerWidth || 1024,
     coarse: Boolean(window.matchMedia && window.matchMedia("(pointer: coarse)").matches),
     touchPoints: navigator.maxTouchPoints || 0,
-    gamepad: controllerWasConnected
+    gamepad: controllerWasConnected,
+    tvBrowser: /AFT[A-Z0-9]*|Fire TV|Xbox/i.test(navigator.userAgent || "")
   };
 }
 function applyMode() {
