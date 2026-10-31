@@ -74,6 +74,17 @@ See [Rung 5 engineering and field checklist](docs/ARCADE_PLAYBACK.md) for proven
 
 Physical Xbox/Fire TV remote testing is still required. Passing software tests cannot certify device input routing.
 
+## Rung 7 (v0.7.0) — Browser Acceptance
+
+- Actual headless Chromium integration checks for the rendered app on desktop, TV-sized, phone and tablet viewport profiles
+- Tests for remote keyboard focus, arcade gameplay controls, player modal focus trapping, source/game favorites and Field Lab persistence
+- PWA manifest/icons and offline cached-shell reload tested over localhost after service-worker activation
+- **Browser tests gate the GitHub Pages deployment**. Screenshots and traces are retained as GitHub Actions artifacts
+- Runtime remains dependency-free. Playwright is pinned and installed only for test automation
+- [Rung 7 field notes](docs/BROWSER_ACCEPTANCE_RUNG7.md) explain what Chromium simulations do and do not prove
+
+Xbox Edge, Amazon Silk, iOS Safari and actual mobile hardware still require manual validation.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -107,8 +118,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 3. **Rung 3:** Manual Xbox field reports and original-game launcher (merged).
 4. **Rung 4:** Multi-device web shell and PWA assets (merged).
 5. **Rung 5:** Curated original-game library and playback diagnostics (merged).
-6. **Rung 6:** Remote input ownership, TV focus and player modal hardening (this PR).
-7. **Rung 7:** Real Fire TV/Xbox/mobile field acceptance and performance work, then evaluate native wrappers only if needed.
+6. **Rung 6:** Remote input ownership, TV focus and modal hardening (merged).
+7. **Rung 7:** Chromium device-profile integration checks and Pages deployment gate (this PR).
+8. **Rung 8:** Real Fire TV/Xbox/mobile hardware validation and performance tuning, then consider native wrappers if necessary.
 
 ## Rights and scope
 
