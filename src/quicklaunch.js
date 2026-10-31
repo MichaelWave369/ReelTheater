@@ -53,7 +53,7 @@ export function recordRecent(list,key) {
 export function quickResults({query="",filter="all",favorites=[],recent=[]}={}) {
   const q=String(query).toLocaleLowerCase().trim().slice(0,100);
   const selected=QUICK_FILTERS.some(item=>item.id===filter)?filter:"all";
-  const fav=new Set(validRecents(favorites).concat(favorites.filter(key=>BY_KEY.has(key))));
+  const fav=new Set(Array.isArray(favorites)?favorites.filter(key=>typeof key==="string"&&BY_KEY.has(key)):[]);
   const latest=validRecents(recent);
   const history=new Set(latest);
   const rank=new Map(latest.map((key,index)=>[key,index]));
@@ -73,6 +73,6 @@ export function quickResults({query="",filter="all",favorites=[],recent=[]}={}) 
   });
 }
 export function quickHomeItems({favorites=[],recent=[]}={}) {
-  const keys=[...favorites,...validRecents(recent)].filter((key,i,items)=>items.indexOf(key)===i && BY_KEY.has(key));
+  const keys=[...(Array.isArray(favorites)?favorites:[]),...validRecents(recent)].filter((key,i,items)=>items.indexOf(key)===i && BY_KEY.has(key));
   return keys.slice(0,6).map(key=>BY_KEY.get(key));
 }
