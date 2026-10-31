@@ -58,7 +58,9 @@ test("first video-frame callback is not falsely reported from the playing event"
     cb(performance.now(),{presentedFrames:1});
   });
   await expect(page.locator("#player-health-frame")).toContainText("ms after load request");
-  await expect(page.locator("#player-health-guidance")).toContainText("Confirm actual picture and sound");
+  // This synthetic callback is delivered after a deliberately aborted media request.
+  // Actual decode/network errors correctly outrank a callback in user-facing guidance.
+  await expect(page.locator("#player-health-guidance")).toContainText(/Try a supported MP4|Check connectivity/);
   const [download]=await Promise.all([
     page.waitForEvent("download"),
     page.locator('#player-modal [data-action="export-health"]').click()
