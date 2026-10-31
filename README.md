@@ -52,6 +52,17 @@ One PWA-capable web application across TV browsers, mobile, tablet and desktop, 
 
 **Important:** Xbox Edge, Fire TV Silk and iOS installation/remote behavior are device-test candidates, not verified capabilities. Browser launch is the baseline; no native Fire TV/Android package is shipped.
 
+## Rung 5 (v0.5.0) — Original Arcade and Playback Health
+
+- Five curated first-party browser game/project destinations, with instant genre and search filters, and local game favorites
+- Break the Matrix, Spark, Piece by Piece and PhiCade directly linked from their documented GitHub Pages routes. TweedleVerse opens its repository until the public arcade deployment has been confirmed
+- Game compatibility stays **unverified on Xbox/Fire TV/mobile** until real device testing; Field Lab now includes the three additional browser games
+- Live session-only HTML5 player diagnostics for the bundled CC0 demo and user-selected local video: metadata, playing, buffering, errors and elapsed event times
+- Explicit privacy-safe JSON export that excludes local filenames, video URLs, personal identifiers and third-party stream information
+- New catalog and playback tests; versioned app-shell cache, with no external game or provider media cached
+
+See [Rung 5 engineering and field checklist](docs/ARCADE_PLAYBACK.md) for provenance and device test requirements.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -83,8 +94,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 1. **Rung 1:** Controller-first shell, sample and selected media playback, original arcade game (merged).
 2. **Rung 2:** Official discovery, filtering and favorites (merged).
 3. **Rung 3:** Manual Xbox field reports and original-game launcher (merged).
-4. **Rung 4:** Multi-device adaptive web shell and installable-PWA assets (this PR).
-5. **Rung 5:** Real Fire TV/Xbox/mobile field validation and optionally a packaged Android/Fire TV wrapper if browser compatibility is insufficient.
+4. **Rung 4:** Multi-device web shell and PWA assets (merged).
+5. **Rung 5:** Curated original-game library and local playback diagnostics (this PR).
+6. **Rung 6:** Real Fire TV/Xbox/mobile acceptance, then consider packaged Android/Fire TV wrapper only if browser behavior requires it.
 
 ## Rights and scope
 

@@ -2,6 +2,8 @@ import { startArcade } from "./arcade.js";
 import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from "./sources.js";
 import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,updateFieldEntry,fieldCounts,fieldMarkup} from "./field.js";
 import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remoteBackKey} from "./platform.js";
+import {GAMES,GAME_CATEGORIES,filterGames,parseGameFavorites} from "./games.js";
+import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGuidance} from "./playback.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -23,6 +25,10 @@ let toastTimer;
 let sourceCategory = "all";
 let sourceQuery = "";
 let sourceFavoritesOnly = false;
+let gameQuery = "";
+let gameCategory = "all";
+let gameFavoritesOnly = false;
+let playbackSession = createPlaybackSession();
 let installPrompt = null;
 let currentMode = "desktop";
 
@@ -134,6 +140,38 @@ function renderSourceList() {
       '<a class="action secondary source-open" href="' + source.url + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + source.name + ' official site">Open official site ↗</a></article>';
   }).join("") : '<div class="source-empty"><strong>No matching services.</strong><p>Try another category or clear Favorites. No hidden repositories are being searched.</p></div>';
 }
+function gameFavorites() {
+  return parseGameFavorites(read("favorite-games","[]"));
+}
+function gameSection() {
+  return '<section class="game-catalog" aria-label="Original browser-game catalog">' +
+    '<div class="section-heading"><div><h2>Original Game Library</h2><p>Direct first-party links. No emulator repository maze, no phantom arcade cabinets.</p></div></div>' +
+    '<div class="source-controls"><label class="source-search-label" for="game-query">Find a game<input id="game-query" type="search" placeholder="Try Spark, puzzle, arcade..." autocomplete="off"></label>' +
+    '<div class="source-filters" aria-label="Game genres">' +
+    GAME_CATEGORIES.map(cat=>'<button type="button" class="source-chip'+(gameCategory===cat.id?' selected':'')+'" aria-pressed="'+(gameCategory===cat.id)+'" data-game-category="'+cat.id+'">'+cat.label+'</button>').join("") +
+    '<button type="button" class="source-chip'+(gameFavoritesOnly?' selected':'')+'" data-game-only-favorites="true" aria-pressed="'+gameFavoritesOnly+'">♥ Favorites</button></div></div>' +
+    '<p id="game-count" class="source-count" aria-live="polite"></p><div id="game-results" class="game-grid"></div>' +
+    '<p class="fineprint">These are independent browser projects, not games embedded in this app. Their repositories document browser entry points, but Xbox, Silk, mobile and live availability remain unverified here. Each external game owns its own saved progress.</p></section>';
+}
+function renderGameCards() {
+  const root=document.getElementById("game-results");
+  if (!root) return;
+  const favorites=gameFavorites();
+  const list=filterGames({query:gameQuery,category:gameCategory,onlyFavorites:gameFavoritesOnly,favorites});
+  const statuses=currentFieldReport().entries;
+  const count=document.getElementById("game-count");
+  if (count) count.textContent=list.length+" of "+GAMES.length+" projects shown";
+  root.innerHTML=list.length ? list.map(game=>{
+    const favorite=favorites.includes(game.id);
+    const status=game.fieldId && statuses[game.fieldId]?.status;
+    const ownStatus=status && status!=="untested" ? FIELD_STATES.find(s=>s.id===status)?.label : "Not tested";
+    return '<article class="game-card"><div class="game-top"><div><span class="eyebrow">'+game.kind+'</span><h3>'+game.name+'</h3></div>' +
+      '<button class="source-fav" data-game-favorite="'+game.id+'" aria-pressed="'+favorite+'" aria-label="'+(favorite?'Remove ':'Save ')+game.name+(favorite?' from favorites':' to favorites')+'">'+(favorite?'♥':'♡')+'</button></div>' +
+      '<p>'+game.description+'</p><div class="source-meta"><span>'+game.platform+'</span><span>'+game.evidence+'</span></div>' +
+      '<p class="source-self-report">My device: '+ownStatus+'</p>' +
+      '<a class="action secondary game-open" href="'+game.url+'" target="_blank" rel="noopener noreferrer">'+(game.entry==="game"?'Open browser game ↗':'View project ↗')+'</a></article>';
+  }).join("") : '<div class="source-empty"><strong>No matches here.</strong><p>Clear search or Favorites. We do not invent games to fill a grid.</p></div>';
+}
 function hero() {
   return '<section class="hero"><div class="hero-copy"><div class="eyebrow">✦ YOUR LIVING ROOM. REIMAGINED.</div><h1>Less waiting.<br><em>More watching.</em></h1><p>A home theater that gets out of your way. Watch a sample, play a real arcade game, or bring your own media. No accounts. No mystery repositories.</p><div class="actions"><button data-action="demo" class="action">▷ Watch demo video</button><button data-view="arcade" class="action secondary">✧ Open Arcade</button><button data-view="watch" class="action ghost">⌕ Discover free TV</button></div></div></section>';
 }
@@ -144,18 +182,65 @@ function home() {
     '<section class="tile-grid" aria-label="Quick actions">' +
     '<button class="tile" data-action="' + (progress > 0 ? 'resume' : 'demo') + '"><span class="icon">▶</span><h3>' + (progress > 0 ? 'Continue Watching' : 'Try the Player') + '</h3><p>' + (progress > 0 ? 'Resume demo at ' + timestamp(progress) : 'Real HTML5 video, not a fake play button.') + '</p></button>' +
     '<button class="tile" data-action="file"><span class="icon">▤</span><h3>My Media</h3><p>Open a video or audio file you choose.</p></button>' +
-    '<button class="tile" data-view="arcade"><span class="icon">✧</span><h3>REEL Arcade</h3><p>Signal Breaker: a playable, offline-ready game.</p></button>' +
+    '<button class="tile" data-view="arcade"><span class="icon">✧</span><h3>REEL Arcade</h3><p>Signal Breaker plus a curated library of original browser games.</p></button>' +
     '</section>' +
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
     '<div class="feature-card"><div class="tag">Xbox field testing</div><h3>The Shayne Test</h3><p>Check which services and games actually work on your Series X, then download an honest report.</p><button class="action secondary" data-view="field">Open Field Lab</button></div></section>';
 }
+function playbackHealthSection() {
+  return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
+    '<div class="health-details"><div><span class="eyebrow">CURRENT ATTEMPT</span><h3 id="health-status">Not started</h3><p id="health-guidance">Choose the demo or a local file to see events.</p><p id="health-first-event">First playing event: not observed</p></div>' +
+    '<div><strong>Recent events</strong><ol id="health-events" class="health-events"><li>No playback attempts yet.</li></ol></div></div>' +
+    '<button class="action secondary" data-action="export-health">Download privacy-safe diagnostics</button>' +
+    '<p class="fineprint">This report contains only event names, elapsed milliseconds, a generic error category and demo/local indicator. It never includes the selected local filename or media URL. A playing event does not independently verify picture or sound.</p></section>';
+}
+function renderPlaybackHealth() {
+  const summary=safePlaybackSummary(playbackSession);
+  for (const id of ["health-status","player-health-status"]) {
+    const node=document.getElementById(id);
+    if (node) node.textContent=summary.status;
+  }
+  for (const id of ["health-guidance","player-health-guidance"]) {
+    const node=document.getElementById(id);
+    if (node) node.textContent=playbackGuidance(playbackSession);
+  }
+  const first=document.getElementById("health-first-event");
+  if (first) first.textContent=summary.firstPlayingMs===null ?
+    "First playing event: not observed" : "First playing event: "+summary.firstPlayingMs+" ms after start (not first visible frame)";
+  for (const id of ["health-events","player-health-events"]) {
+    const node=document.getElementById(id);
+    if (!node) continue;
+    node.replaceChildren();
+    if (!summary.events.length) {
+      const item=document.createElement("li");
+      item.textContent="No media events observed yet";
+      node.appendChild(item);
+    } else for (const row of summary.events.slice().reverse()) {
+      const item=document.createElement("li");
+      item.textContent=row.event+" · "+row.elapsedMs+" ms";
+      node.appendChild(item);
+    }
+  }
+}
+function exportPlaybackHealth() {
+  const summary=safePlaybackSummary(playbackSession);
+  const blob=new Blob([JSON.stringify({schema:"REEL_PLAYBACK_SESSION_V1",summary,disclaimer:"Local event signals only; not proof of audio/video rendering or provider support."},null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="reel-playback-health.json";
+  document.body.appendChild(a);
+  a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  notify("Diagnostics download requested. Some TV browsers may block downloads.");
+}
 function watch() {
   return '<div class="page-heading"><div class="eyebrow">THE WATCH ROOM</div><h1>Pick something. Press play.</h1><p>A working player, without digging through repositories. The sample is hosted by MDN; local-file playback never uploads your media.</p></div>' +
     '<div class="card-grid"><div class="feature-card"><div class="tag">CC0 demo · online</div><h3>Flower: Playback Sample</h3><p>A small Creative Commons Zero video used to verify your Xbox browser playback. Network required.</p><button class="action" data-action="demo">▷ Play sample</button></div>' +
     '<div class="feature-card"><div class="tag">Your device · private</div><h3>Open My Media</h3><p>Choose a supported video or audio file using the browser file picker. No upload, scanning, or saved file access.</p><button class="action secondary" data-action="file">▤ Choose a file</button></div></div>' +
-    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + sourceSection();
+    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + playbackHealthSection() + sourceSection();
 }
 function live() {
   return '<div class="page-heading"><div class="eyebrow">LIVE TV</div><h1>No dead channel buttons.</h1><p>This room is intentionally honest. There is no invented channel lineup and no unverified live feed behind the artwork.</p></div>' +
@@ -170,12 +255,11 @@ function library() {
     '<div class="feature-card"><div class="tag">Saved to this browser</div><h3>Flower Demo</h3><p>' + (isFav ? "Added to your favorites." : "Not in your favorites yet.") + '</p><button class="action secondary" data-action="favorite">' + (isFav ? "♥ Remove favorite" : "♡ Add favorite") + '</button><button class="action ghost" data-action="demo">▷ Play</button></div></section>';
 }
 function arcade() {
-  return '<div class="page-heading"><div class="eyebrow">REEL ARCADE · ORIGINAL MINI-GAME</div><h1>Signal Breaker</h1><p>An actual playable paddle-and-orbs game, built into REEL Theater. Not a placeholder linking to a broken add-on. Works offline once the app shell is cached.</p></div>' +
+  return '<div class="page-heading"><div class="eyebrow">REEL ARCADE · ORIGINAL GAMES</div><h1>Play first. Configure never.</h1><p>Signal Breaker is bundled and playable from the offline shell. Our other browser games open in their own websites, without installing a Kodi add-on.</p></div>' +
     '<div class="arcade-stage"><canvas id="signal-breaker" width="960" height="540" aria-label="Signal Breaker arcade game" role="img"></canvas><div class="arcade-tools"><div class="actions"><button id="start-game" class="action">✧ Start / Restart</button><button data-view="home" class="action secondary">⌂ Home</button></div><p>← → / A D / left stick to move · A or Space to launch · B or Escape to leave</p></div></div>' +
-    '<div class="section-heading"><div><h2>More from our arcade</h2><p>Original game launcher. Xbox Edge compatibility is still unverified.</p></div></div>' +
-    '<div class="feature-card"><div class="tag">Original game · Xbox Edge untested</div><h3>Break the Matrix</h3><p>Open the existing free browser FPS in a separate tab. Gameplay, controller input and performance must be checked on Shayne’s Xbox before marking it compatible.</p><a class="action secondary" href="' + FIELD_GAME_URL + '" target="_blank" rel="noopener noreferrer">Launch original game ↗</a><button class="action ghost" data-view="field">Record Xbox result</button></div>' +
-    '<p class="fineprint">Signal Breaker is a bundled original mini-game. External games are not embedded, proxied, or claimed to be Xbox tested.</p>';
+    gameSection();
 }
+
 function settings() {
   const online=navigator.onLine;
   const gamepad=Boolean(navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean));
@@ -211,12 +295,15 @@ function render() {
   if (view === "arcade") arcadeCleanup = startArcade(document.getElementById("signal-breaker"), document.getElementById("start-game"));
   const search = document.getElementById("source-query");
   if (search) { search.value = sourceQuery; renderSourceList(); }
+  const gameSearch = document.getElementById("game-query");
+  if (gameSearch) { gameSearch.value=gameQuery; renderGameCards(); }
   if (view === "field") {
     const observations = currentFieldReport().entries;
     document.querySelectorAll("[data-field-note]").forEach(el=>{el.value = observations[el.dataset.fieldNote]?.note || "";});
   }
   applyMode();
   updateConnection();
+  renderPlaybackHealth();
 }
 function setView(target) {
   if (!views.includes(target)) return;
@@ -232,6 +319,8 @@ function setView(target) {
 function showPlayer(title, url, isSample, resume = false) {
   closePlayer();
   samplePlaying = isSample;
+  playbackSession = createPlaybackSession({kind:isSample?"demo":"local",started:performance.now()});
+  renderPlaybackHealth();
   document.getElementById("player-title").textContent = title;
   document.getElementById("player-note").textContent = isSample ?
     "CC0 demonstration stream hosted by MDN. Requires a network connection and supported browser codec." :
@@ -255,6 +344,15 @@ function closePlayer() {
   modal.hidden = true;
   samplePlaying = false;
   if (localMediaUrl) { URL.revokeObjectURL(localMediaUrl); localMediaUrl = null; }
+}
+for (const name of ["loadstart","loadedmetadata","canplay","playing","waiting","stalled","error","ended","pause","seeking","seeked"]) {
+  player.addEventListener(name,()=>{
+    if (modal.hidden) return;
+    playbackSession=recordPlaybackEvent(playbackSession,name,{
+      now:performance.now(),errorCode:name==="error"?player.error?.code:null
+    });
+    renderPlaybackHealth();
+  });
 }
 player.addEventListener("timeupdate", () => {
   if (!samplePlaying || !Number.isFinite(player.currentTime)) return;
@@ -296,6 +394,11 @@ document.addEventListener("change", event => {
   if (indicator) indicator.textContent = FIELD_STATES.find(state=>state.id===(updated.entries[id]?.status || "untested")).label;
 });
 document.addEventListener("input", event => {
+  if (event.target && event.target.id === "game-query") {
+    gameQuery=event.target.value.slice(0,80);
+    renderGameCards();
+    return;
+  }
   if (event.target && event.target.id === "source-query") {
     sourceQuery = event.target.value.slice(0, 80);
     renderSourceList();
@@ -305,6 +408,34 @@ document.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.view) { setView(button.dataset.view); return; }
+  if (button.dataset.gameCategory) {
+    gameCategory=button.dataset.gameCategory;
+    document.querySelectorAll("[data-game-category]").forEach(el=>{
+      const active=el.dataset.gameCategory===gameCategory;
+      el.classList.toggle("selected",active);
+      el.setAttribute("aria-pressed",String(active));
+    });
+    renderGameCards();
+    return;
+  }
+  if (button.dataset.gameOnlyFavorites) {
+    gameFavoritesOnly=!gameFavoritesOnly;
+    button.classList.toggle("selected",gameFavoritesOnly);
+    button.setAttribute("aria-pressed",String(gameFavoritesOnly));
+    renderGameCards();
+    return;
+  }
+  if (button.dataset.gameFavorite) {
+    const id=button.dataset.gameFavorite;
+    if (!GAMES.some(game=>game.id===id)) return;
+    const favorites=gameFavorites();
+    const updated=favorites.includes(id)?favorites.filter(item=>item!==id):[...favorites,id];
+    save("favorite-games",JSON.stringify(updated));
+    renderGameCards();
+    const next=document.querySelector('[data-game-favorite="'+id+'"]');
+    if (next) next.focus(); else document.querySelector("[data-game-only-favorites]")?.focus();
+    return;
+  }
   if (button.dataset.fieldLaunch === "demo") { showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true); return; }
   if (button.dataset.fieldLaunch === "signal") { setView("arcade"); return; }
   if (button.dataset.sourceCategory) {
@@ -347,6 +478,7 @@ document.addEventListener("click", event => {
     button.hidden=true;
     return;
   }
+  if (action === "export-health") { exportPlaybackHealth(); return; }
   if (action === "export-field") { exportFieldReport(); return; }
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
   if (action === "file") filePicker.click();

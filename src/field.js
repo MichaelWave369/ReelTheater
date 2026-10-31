@@ -1,6 +1,7 @@
 // Local operator-observation system, not telemetry or verified cross-device compatibility.
 // All reports are user-authored and remain on the current device unless explicitly exported.
 import {SOURCES} from "./sources.js";
+import {GAMES} from "./games.js";
 
 export const FIELD_GAME_URL = "https://michaelwave369.github.io/BTM/";
 export const FIELD_STATES = Object.freeze([
@@ -13,6 +14,10 @@ export const FIELD_TARGETS = Object.freeze([
   Object.freeze({id:"demo",name:"Sample video",kind:"Playback",description:"In-app HTML5 flower demo. Video must actually play, not just open."}),
   Object.freeze({id:"signal",name:"Signal Breaker",kind:"Game",description:"Start, move paddle, hit a block and restart using the Xbox controller."}),
   Object.freeze({id:"btm",name:"Break the Matrix",kind:"Game · external",description:"Original game at GitHub Pages. Xbox Edge performance and input remain unverified.",url:FIELD_GAME_URL}),
+  ...GAMES.filter(game=>game.fieldId && game.id!=="btm").map(game=>Object.freeze({
+    id:game.fieldId,name:game.name,kind:"Original game · external",
+    description:"Browser game destination listed in its repository; this device has not been tested.",url:game.url
+  })),
   ...SOURCES.map(source => Object.freeze({
     id:"source-"+source.id,name:source.name,kind:"Official provider · external",
     description:"Opening a provider page does NOT prove media playback.",url:source.url
