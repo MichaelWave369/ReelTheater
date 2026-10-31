@@ -189,11 +189,58 @@ function home() {
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
     '<div class="feature-card"><div class="tag">Xbox field testing</div><h3>The Shayne Test</h3><p>Check which services and games actually work on your Series X, then download an honest report.</p><button class="action secondary" data-view="field">Open Field Lab</button></div></section>';
 }
+function playbackHealthSection() {
+  return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
+    '<div class="health-details"><div><span class="eyebrow">CURRENT ATTEMPT</span><h3 id="health-status">Not started</h3><p id="health-guidance">Choose the demo or a local file to see events.</p><p id="health-first-event">First playing event: not observed</p></div>' +
+    '<div><strong>Recent events</strong><ol id="health-events" class="health-events"><li>No playback attempts yet.</li></ol></div></div>' +
+    '<button class="action secondary" data-action="export-health">Download privacy-safe diagnostics</button>' +
+    '<p class="fineprint">This report contains only event names, elapsed milliseconds, a generic error category and demo/local indicator. It never includes the selected local filename or media URL. A playing event does not independently verify picture or sound.</p></section>';
+}
+function renderPlaybackHealth() {
+  const summary=safePlaybackSummary(playbackSession);
+  for (const id of ["health-status","player-health-status"]) {
+    const node=document.getElementById(id);
+    if (node) node.textContent=summary.status;
+  }
+  for (const id of ["health-guidance","player-health-guidance"]) {
+    const node=document.getElementById(id);
+    if (node) node.textContent=playbackGuidance(playbackSession);
+  }
+  const first=document.getElementById("health-first-event");
+  if (first) first.textContent=summary.firstPlayingMs===null ?
+    "First playing event: not observed" : "First playing event: "+summary.firstPlayingMs+" ms after start (not first visible frame)";
+  for (const id of ["health-events","player-health-events"]) {
+    const node=document.getElementById(id);
+    if (!node) continue;
+    node.replaceChildren();
+    if (!summary.events.length) {
+      const item=document.createElement("li");
+      item.textContent="No media events observed yet";
+      node.appendChild(item);
+    } else for (const row of summary.events.slice().reverse()) {
+      const item=document.createElement("li");
+      item.textContent=row.event+" · "+row.elapsedMs+" ms";
+      node.appendChild(item);
+    }
+  }
+}
+function exportPlaybackHealth() {
+  const summary=safePlaybackSummary(playbackSession);
+  const blob=new Blob([JSON.stringify({schema:"REEL_PLAYBACK_SESSION_V1",summary,disclaimer:"Local event signals only; not proof of audio/video rendering or provider support."},null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="reel-playback-health.json";
+  document.body.appendChild(a);
+  a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  notify("Diagnostics download requested. Some TV browsers may block downloads.");
+}
 function watch() {
   return '<div class="page-heading"><div class="eyebrow">THE WATCH ROOM</div><h1>Pick something. Press play.</h1><p>A working player, without digging through repositories. The sample is hosted by MDN; local-file playback never uploads your media.</p></div>' +
     '<div class="card-grid"><div class="feature-card"><div class="tag">CC0 demo · online</div><h3>Flower: Playback Sample</h3><p>A small Creative Commons Zero video used to verify your Xbox browser playback. Network required.</p><button class="action" data-action="demo">▷ Play sample</button></div>' +
     '<div class="feature-card"><div class="tag">Your device · private</div><h3>Open My Media</h3><p>Choose a supported video or audio file using the browser file picker. No upload, scanning, or saved file access.</p><button class="action secondary" data-action="file">▤ Choose a file</button></div></div>' +
-    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + sourceSection();
+    '<p class="fineprint">Commercial streaming services may require their own authorized app and DRM. Browser playback support is format and platform dependent. No unauthorized add-on sources are installed.</p>' + playbackHealthSection() + sourceSection();
 }
 function live() {
   return '<div class="page-heading"><div class="eyebrow">LIVE TV</div><h1>No dead channel buttons.</h1><p>This room is intentionally honest. There is no invented channel lineup and no unverified live feed behind the artwork.</p></div>' +
@@ -256,6 +303,7 @@ function render() {
   }
   applyMode();
   updateConnection();
+  renderPlaybackHealth();
 }
 function setView(target) {
   if (!views.includes(target)) return;
@@ -271,6 +319,8 @@ function setView(target) {
 function showPlayer(title, url, isSample, resume = false) {
   closePlayer();
   samplePlaying = isSample;
+  playbackSession = createPlaybackSession({kind:isSample?"demo":"local",started:performance.now()});
+  renderPlaybackHealth();
   document.getElementById("player-title").textContent = title;
   document.getElementById("player-note").textContent = isSample ?
     "CC0 demonstration stream hosted by MDN. Requires a network connection and supported browser codec." :
@@ -294,6 +344,15 @@ function closePlayer() {
   modal.hidden = true;
   samplePlaying = false;
   if (localMediaUrl) { URL.revokeObjectURL(localMediaUrl); localMediaUrl = null; }
+}
+for (const name of ["loadstart","loadedmetadata","canplay","playing","waiting","stalled","error","ended","pause","seeking","seeked"]) {
+  player.addEventListener(name,()=>{
+    if (modal.hidden) return;
+    playbackSession=recordPlaybackEvent(playbackSession,name,{
+      now:performance.now(),errorCode:name==="error"?player.error?.code:null
+    });
+    renderPlaybackHealth();
+  });
 }
 player.addEventListener("timeupdate", () => {
   if (!samplePlaying || !Number.isFinite(player.currentTime)) return;
@@ -419,6 +478,7 @@ document.addEventListener("click", event => {
     button.hidden=true;
     return;
   }
+  if (action === "export-health") { exportPlaybackHealth(); return; }
   if (action === "export-field") { exportFieldReport(); return; }
   if (action === "demo" || action === "resume") showPlayer("Flower · CC0 playback demo", SAMPLE_URL, true, action === "resume");
   if (action === "file") filePicker.click();
