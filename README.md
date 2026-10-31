@@ -98,6 +98,19 @@ Xbox Edge, Amazon Silk, iOS Safari and actual mobile hardware still require manu
 
 Xbox, Fire TV Silk, Android and iOS still need physical-device verification. This lab helps perform it but cannot substitute for it.
 
+## Rung 9 (v0.9.0) — Quick Launch
+
+- Unified **Quick Launch** page showing curated official streaming sources and original games together: instant local search, All / Favorites / Recent / Games / Watch & Live filters
+- One-click Home shortcut shelf with up to six saved favorites or recently selected links
+- Reuses original Watch and Arcade favorite storage, so changing a favorite anywhere updates the same data on this browser
+- Tracks only deliberate clicks on catalog-matched destinations, with a capped nine-ID recent list and an explicit **Clear recent selections** button
+- No source pings, provider scraping, telemetry, arbitrary external URL storage, accounts or fake compatibility claims
+- TV-distance cards, keyboard/remote focus, touch layouts, and local offline shell support
+- New Node and four-profile Chromium E2E acceptance tests
+- [Quick Launch design and privacy notes](docs/QUICK_LAUNCH_RUNG9.md)
+
+**Important:** a recent click means the user selected an external link, not that video played or a browser game successfully loaded.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -133,8 +146,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 5. **Rung 5:** Curated original-game library and playback diagnostics (merged).
 6. **Rung 6:** Remote input ownership, TV focus and modal hardening (merged).
 7. **Rung 7:** Chromium profiles and browser-gated Pages deployments (merged).
-8. **Rung 8:** Voluntary on-device input and frame pacing readiness lab (this PR).
-9. **Rung 9:** Physical Fire TV/Xbox/mobile acceptance, then measured performance fixes and native wrapper decisions.
+8. **Rung 8:** On-device input and frame pacing readiness lab (merged).
+9. **Rung 9:** Unified Quick Launch with existing favorites and private recent selections (this PR).
+10. **Rung 10:** Physical Fire TV/Xbox/mobile acceptance, measured UI improvements and optional native wrappers only if needed.
 
 ## Rights and scope
 
