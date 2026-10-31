@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080d1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <meta name="description" content="REEL Theater: a fast, controller-friendly media and arcade home screen.">
   <title>REEL Theater | Home Without the Hassle</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
@@ -29,13 +34,13 @@
     </nav>
     <div class="side-bottom">
       <div class="connection-pill"><span class="signal-dot"></span><span>Local-first shell</span></div>
-      <div class="small-muted">REEL Theater <strong>Rung 3</strong><br>Xbox Edge pilot</div>
+      <div class="small-muted">REEL Theater <strong>Rung 4</strong><br>Xbox Edge pilot</div>
     </div>
   </aside>
   <div class="workspace">
     <header class="topbar">
       <span class="top-label">ENTERTAINMENT, UNCOMPLICATED</span>
-      <div class="top-actions"><span id="controller-status" class="controller-status" aria-live="polite">Keyboard / Remote</span><button class="round-button" data-action="help" aria-label="Show controls">?</button></div>
+      <div class="top-actions"><span id="connection-status" class="connection-status" aria-live="polite">Checking connection</span><span id="controller-status" class="controller-status" aria-live="polite">Keyboard / Remote</span><button class="round-button" data-action="help" aria-label="Show controls">?</button></div>
     </header>
     <main id="main-content" tabindex="-1" aria-live="polite"></main>
     <footer class="footer"><span>Good stories. Open doors.</span><span>Built for the living room · No account required</span></footer>
