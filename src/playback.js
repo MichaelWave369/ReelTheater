@@ -11,7 +11,30 @@ export const MAX_EVENTS=12;
 
 export function createPlaybackSession({kind="demo",started=0}={}) {
   return {kind:kind==="local"?"local":"demo",started:Number.isFinite(started)?started:0,status:"Not started",
-    events:[],firstPlayingMs:null,error:null};
+    events:[],firstPlayingMs:null,firstVideoFrameMs:null,videoFrameObservation:"not-checked",error:null};
+}
+export const VIDEO_FRAME_STATES=Object.freeze(["not-checked","pending","unavailable","not-applicable","observed"]);
+export function setVideoFrameObservation(session,status) {
+  if(!VIDEO_FRAME_STATES.includes(status))return session;
+  return {...session,videoFrameObservation:status,
+    firstVideoFrameMs:status==="observed"?session.firstVideoFrameMs:null};
+}
+// requestVideoFrameCallback reports frames submitted for composition by the browser.
+// It does NOT independently prove that a viewer saw pixels or heard sound.
+export function recordVideoFrameCallback(session,{now=0,hasVideo=true}={}) {
+  if(session?.videoFrameObservation!=="pending"||!hasVideo)return session;
+  const started=Number.isFinite(session.started)?session.started:0;
+  const elapsed=Number.isFinite(now)?Math.max(0,Math.round(now-started)):0;
+  return {...session,firstVideoFrameMs:elapsed,videoFrameObservation:"observed"};
+}
+export function firstVideoFrameLabel(session) {
+  switch(session?.videoFrameObservation){
+    case "pending":return "First video frame callback: awaiting a frame";
+    case "observed":return "First video frame callback: "+session.firstVideoFrameMs+" ms after load request (not proof of visible picture)";
+    case "unavailable":return "Frame callback API unavailable in this browser";
+    case "not-applicable":return "Video frame measurement: not applicable to audio";
+    default:return "First video frame callback: not checked";
+  }
 }
 export function mediaErrorText(code) {
   return ERRORS[code] || "Unknown media error";
@@ -37,6 +60,8 @@ export function safePlaybackSummary(session) {
     kind:session?.kind==="local"?"local":"demo",
     status:String(session?.status||"Not started"),
     firstPlayingMs:Number.isFinite(session?.firstPlayingMs)?Math.max(0,session.firstPlayingMs):null,
+    firstVideoFrameMs:Number.isFinite(session?.firstVideoFrameMs)?Math.max(0,session.firstVideoFrameMs):null,
+    videoFrameObservation:VIDEO_FRAME_STATES.includes(session?.videoFrameObservation)?session.videoFrameObservation:"not-checked",
     error:session?.error?String(session.error):null,
     events:Array.isArray(session?.events)?session.events.slice(-MAX_EVENTS).map(row=>({
       event:String(row.event),elapsedMs:Math.max(0,Number(row.elapsedMs)||0)
@@ -50,6 +75,8 @@ export function playbackGuidance(session) {
     return "Try another file or reload the sample. Browser and provider restrictions may apply.";
   }
   if(session?.status==="Buffering / waiting for data" || session?.status==="Loading stalled") return "Data is delayed. Check connectivity or the file; third-party buffering cannot be eliminated here.";
-  if(session?.status==="Browser signaled playback") return "The media element reported playback. Confirm visible video and audio on your device.";
+  if(session?.status==="Browser signaled playback") return session.videoFrameObservation==="observed" ?
+    "The browser reported a video frame submitted for composition. Confirm actual picture and sound on your device." :
+    "The media element reported playback. Confirm visible video and audio on your device.";
   return "Choose the demo or a local file to inspect real media-element events.";
 }
