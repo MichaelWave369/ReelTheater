@@ -39,7 +39,7 @@ export function createPortableSetup({sources=[],games=[],recents=[],mode="auto"}
 // but MUST be disclosed in the preview. Structural errors reject the entire input.
 export function parsePortableSetup(raw) {
   if(typeof raw!=="string" || !raw.trim())return {ok:false,error:"Paste a REEL setup JSON backup first."};
-  if(raw.length>PORTABLE_MAX_BYTES)return {ok:false,error:"This backup exceeds the 8 KB limit."};
+  if(new TextEncoder().encode(raw).byteLength>PORTABLE_MAX_BYTES)return {ok:false,error:"This backup exceeds the 8 KB limit."};
   let parsed;
   try {parsed=JSON.parse(raw);}
   catch{return {ok:false,error:"That is not valid JSON."};}
@@ -67,10 +67,19 @@ export function parsePortableSetup(raw) {
   return {ok:true,setup,dropped,removed};
 }
 
+function normalizeStructuredSetup(value) {
+  return createPortableSetup({
+    sources:value?.favorites?.sources,
+    games:value?.favorites?.games,
+    recents:value?.recents,
+    mode:value?.preferences?.mode
+  });
+}
+
 export function mergePortableSetup(current,incoming,strategy="merge") {
   if(strategy!=="merge" && strategy!=="replace")throw Error("Unknown import strategy");
-  const safeCurrent=createPortableSetup(current);
-  const safeIncoming=createPortableSetup(incoming);
+  const safeCurrent=normalizeStructuredSetup(current);
+  const safeIncoming=normalizeStructuredSetup(incoming);
   if(strategy==="replace")return safeIncoming;
   // The current browser keeps its selected layout. Imported favorites are
   // appended, and current recently selected links take precedence.
@@ -83,7 +92,7 @@ export function mergePortableSetup(current,incoming,strategy="merge") {
 }
 
 export function describePortableSetup(setup) {
-  const data=createPortableSetup(setup);
+  const data=normalizeStructuredSetup(setup);
   return {
     sources:data.favorites.sources.length,
     games:data.favorites.games.length,
@@ -98,7 +107,7 @@ export function describePortableSetup(setup) {
 // Callers read/write these known localStorage keys; no arbitrary JSON keys
 // are interpreted as storage destinations.
 export function toStoragePairs(setup) {
-  const data=createPortableSetup(setup);
+  const data=normalizeStructuredSetup(setup);
   return [
     ["favorite-sources",JSON.stringify(data.favorites.sources)],
     ["favorite-games",JSON.stringify(data.favorites.games)],
