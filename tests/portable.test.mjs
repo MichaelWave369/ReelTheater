@@ -97,7 +97,7 @@ test("UI gates import behind preview and does not silently upload personal data"
   assert.match(app,/function loadPortableFile/);
   assert.match(app,/before\.push/);
   assert.match(app,/window\.localStorage\.setItem/);
-  assert.match(sw,/reel-theater-shell-v11/);
+  assert.match(sw,/reel-theater-shell-v12/);
   assert.match(sw,/src\/portable\.js/);
   assert.match(css,/\.portable-preview-status/);
 });
