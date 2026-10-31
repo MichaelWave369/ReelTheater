@@ -27,6 +27,17 @@ REEL Theater is a separate companion to [ReelCommons](https://github.com/Michael
 
 For source policy, official reference pages and Xbox acceptance, see [Source Discovery](docs/SOURCE_DISCOVERY.md).
 
+## Rung 3 (v0.3.0) — The Shayne Test
+
+- **Xbox Field Lab** in primary navigation: manual observations for video, Signal Breaker, Break the Matrix and each official service
+- Four explicit states: Not tested, Opened (playback unverified), Worked on this device, Failed/blocked
+- Per-service **My device** badge is local-only, never a verified compatibility claim
+- Local note fields (240 characters maximum) and explicitly requested downloadable, unsigned JSON report
+- Direct, clearly **Xbox Edge untested** Break the Matrix arcade launch to its existing GitHub Pages game
+- Xbox gamepad support for field outcome selection; updated offline shell and automated tests
+
+See [Xbox Field Lab](docs/XBOX_FIELD_LAB.md) for the hardware acceptance process. CI passing does not mean a game or provider has been verified on Xbox.
+
 ## Run locally
 
 Use a static HTTP server in the repository root:
@@ -55,8 +66,8 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 ## Roadmap
 
 1. **Rung 1:** Controller-first shell, sample and selected media playback, original arcade game (merged).
-2. **Rung 2:** Source-verified official discovery links, filtering and favorites (this PR).
-3. **Rung 3:** Actual Xbox compatibility receipts, source-health feedback and tested original game catalog.
+2. **Rung 2:** Official discovery, filtering and favorites (merged).
+3. **Rung 3:** Private, manual Xbox field reports and unverified original-game launcher (this PR).
 4. **Rung 4:** Investigate supported Xbox native app, authorized media-server access, EPG and DVR.
 
 ## Rights and scope
