@@ -51,6 +51,6 @@ test("app uses one scheduler, handles connection wake-up and stops duplicate sam
   assert.match(app,/data-action="redraw-clear"/);
   assert.match(app,/device-redraw-result/);
   assert.match(sw,/src\/performance\.js/);
-  assert.match(sw,/reel-theater-shell-v11/);
+  assert.match(sw,/reel-theater-shell-v12/);
   assert.doesNotMatch(app,/console\.log\([^)]*navigator\.userAgent/);
 });
