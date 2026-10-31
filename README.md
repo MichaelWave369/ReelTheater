@@ -137,6 +137,19 @@ This is manual portability, **not** automatic syncing. Physical Xbox and Fire TV
 
 Actual Fire TV Silk, Xbox Edge and mobile hardware validation still matters. We are reducing unnecessary work while keeping honest measurements of what the browser can actually report.
 
+## Rung 12 (v0.12.0) — Playback Reality Lab
+
+- **Watch → Check browser format hints** asks the browser about MP4/H.264, MP4/HEVC, WebM/VP8, WebM/VP9, MP4/AV1, MP3 and AAC, without fetching any provider or third-party media
+- Distinguishes "probably", "maybe" and "not reported" codec hints from real playback support; shows MediaSource API and video-frame callback API presence
+- Video attempts now separately record the time to the HTMLMediaElement **playing** event and the first supported **video-frame callback**
+- Frame callbacks are guarded against stale/closed media sessions; unsupported browsers and audio-only files show honest fallbacks
+- Player modal and Watch diagnostics display the distinction. Optional private diagnostic exports use REEL_PLAYBACK_SESSION_V2 without filenames, file paths, provider URLs, dimensions, tokens or user-agent
+- A video-frame callback means the browser submitted a frame for composition, **not proof that a user actually saw picture or heard audio**
+- New Node and multi-profile Chromium regression tests, plus first-party offline shell update v12
+- [Rung 12 details and real-device playback checklist](docs/PLAYBACK_REALITY_RUNG12.md)
+
+Physical Xbox Edge, Fire TV Silk, iOS and Android tests are still needed before labeling any media format or device playback path verified.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -175,8 +188,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 8. **Rung 8:** On-device input and frame pacing readiness lab (merged).
 9. **Rung 9:** Unified Quick Launch with shared favorites and recent selections (merged).
 10. **Rung 10:** Portable setup backup/import (merged).
-11. **Rung 11:** Runtime responsiveness, adaptive input polling and in-session UI timing (this PR).
-12. **Rung 12:** Physical Fire TV/Xbox/mobile acceptance, playback/first-frame investigations and native-wrapper decisions only if needed.
+11. **Rung 11:** Runtime responsiveness and device UI timing (merged).
+12. **Rung 12:** Browser codec hints and first-frame callback observations (this PR).
+13. **Rung 13:** Physical Fire TV/Xbox/mobile playback acceptance and device-specific compatibility fixes.
 
 ## Rights and scope
 

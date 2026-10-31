@@ -79,6 +79,6 @@ test("Device Lab uses explicit actions, observable input and no hidden persisten
  assert.match(app,/sampleFrameToken|frameSampleToken/);
  assert.match(app,/data-action="device-export"/);
  assert.doesNotMatch(app,/save\("device-|localStorage\.setItem\(.*device/);
- assert.match(sw,/reel-theater-shell-v11/);
+ assert.match(sw,/reel-theater-shell-v12/);
  assert.match(sw,/src\/device\.js/);
 });

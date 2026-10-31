@@ -263,3 +263,17 @@ html[data-ui-mode="touch"] .quick-card .quick-open{min-height:49px}
 html[data-ui-mode="tv"] .portable-label textarea{font-size:16px;min-height:172px}
 html[data-ui-mode="tv"] .portable-preview-status{font-size:16px}
 @media(max-width:740px){.portable-setup .actions .action{flex:1 1 100%;width:100%}.portable-label input[type=file]{font-size:12px}}
+
+/* Rung 12: opt-in browser format hints and honest first-video-frame status. */
+.media-support-panel{margin-top:30px;padding:20px 23px;background:linear-gradient(142deg,#182440,#111a30);border:1px solid #435477;border-radius:17px}
+.media-support-panel .section-heading{margin:0 0 18px}
+.media-support-results{margin:17px 0 5px}
+.media-support-results>p{color:#b9cbe5;font-size:13px;line-height:1.6}
+.media-support-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;list-style:none;padding:0;margin:0}
+.media-support-list li{display:flex;align-items:center;justify-content:space-between;gap:15px;min-width:0;border-radius:10px;background:#111c34;border:1px solid #354968;padding:12px 14px;color:#d7e5fa;font-size:13px}
+.media-support-list strong{white-space:nowrap;color:#a4e6dd}
+.media-support-api{font-size:12px;color:#a5b8d9;margin-top:15px}
+#health-first-frame,.player-frame-status{font-size:13px;font-weight:600;color:#d8c9ff;line-height:1.55}
+html[data-ui-mode="tv"] .media-support-list li{font-size:16px;min-height:57px}
+html[data-ui-mode="tv"] #health-first-frame{font-size:16px}
+@media(max-width:840px){.media-support-list{grid-template-columns:1fr}.media-support-panel{padding:17px}}
