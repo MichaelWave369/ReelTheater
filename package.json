@@ -1,11 +1,11 @@
 {
   "name": "reel-theater",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
-  "description": "Local-first every-screen entertainment hub with unified TV/game quick launch, favorites, and local recent selections.",
+  "description": "Local-first cross-device entertainment launcher with voluntary portable favorite and layout backups.",
   "scripts": {
-    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check src/games.js && node --check src/playback.js && node --check src/remote.js && node --check src/device.js && node --check src/quicklaunch.js && node --check playwright.config.mjs && node --check e2e/browser.spec.mjs && node --check e2e/device.spec.mjs && node --check e2e/quicklaunch.spec.mjs && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
+    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check src/games.js && node --check src/playback.js && node --check src/remote.js && node --check src/device.js && node --check src/quicklaunch.js && node --check src/portable.js && node --check playwright.config.mjs && node --check e2e/browser.spec.mjs && node --check e2e/device.spec.mjs && node --check e2e/quicklaunch.spec.mjs && node --check e2e/portable.spec.mjs && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
     "build": "node scripts/build.mjs",
     "test:browser": "playwright test --config=playwright.config.mjs"
   },

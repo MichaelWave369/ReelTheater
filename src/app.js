@@ -7,6 +7,7 @@ import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGu
 import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} from "./remote.js";
 import {makeDeviceLog,appendDeviceInput,inputLabel,gamepadLabel,frameStats,safeDeviceReport} from "./device.js";
 import {QUICK_ITEMS,QUICK_FILTERS,quickItem,favoriteKeys,parseRecents,recordRecent,quickResults,quickHomeItems} from "./quicklaunch.js";
+import {createPortableSetup,parsePortableSetup,mergePortableSetup,describePortableSetup,toStoragePairs,PORTABLE_MAX_BYTES} from "./portable.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -36,6 +37,8 @@ let installPrompt = null;
 let currentMode = "desktop";
 let quickQuery = "";
 let quickFilter = "all";
+let pendingPortableImport = null;
+let pendingPortableRaw = "";
 let deviceLog = makeDeviceLog();
 let deviceCapture = false;
 let lastDevicePadLabel = "";
@@ -434,6 +437,136 @@ function exportDeviceLab() {
   setTimeout(()=>URL.revokeObjectURL(url),30000);
   notify("Device report download requested. Some TV browsers block downloads.");
 }
+function currentPortableSetup() {
+  return createPortableSetup({
+    sources:sourceFavorites(),
+    games:gameFavorites(),
+    recents:recentQuickLinks(),
+    mode:normalizeMode(read("display-mode","auto"))
+  });
+}
+function portableSetupSection() {
+  return '<div class="section-heading"><div><h2>Move your setup</h2>' +
+    '<p>Bring your favorites and shortcuts to another browser without an account or cloud sync.</p></div></div>' +
+    '<section class="setup-card portable-setup" aria-label="Export and import REEL setup">' +
+    '<div class="eyebrow">EXPLICIT, LOCAL-ONLY BACKUP</div>' +
+    '<h3>1. Export from this browser</h3>' +
+    '<p>Includes official-source favorites, original-game favorites, the last nine selected shortcuts, and display preference. Excludes Field Lab notes, personal media, watch progress and device diagnostics.</p>' +
+    '<div class="actions"><button class="action secondary" data-action="portable-show">Show JSON</button>' +
+    '<button class="action secondary" data-action="portable-download">Download backup</button>' +
+    '<button class="action ghost" data-action="portable-copy">Copy JSON</button></div>' +
+    '<label class="portable-label" for="portable-export-text">Backup JSON<textarea id="portable-export-text" rows="5" readonly spellcheck="false" placeholder="Your export appears here after you choose Show, Download or Copy."></textarea></label>' +
+    '<h3>2. Preview a backup from another device</h3>' +
+    '<p>Paste a REEL V1 setup JSON file or choose a small local JSON file. Nothing is uploaded or applied until you preview and confirm.</p>' +
+    '<label class="portable-label" for="portable-file">Open a local backup file<input id="portable-file" type="file" accept=".json,application/json"></label>' +
+    '<label class="portable-label" for="portable-import-text">Import JSON<textarea id="portable-import-text" rows="6" spellcheck="false" autocomplete="off" placeholder="Paste REEL_PORTABLE_SETUP_V1 JSON here, then preview."></textarea></label>' +
+    '<button class="action" data-action="portable-preview">Preview incoming setup</button>' +
+    '<div id="portable-preview-status" class="portable-preview-status" aria-live="polite">No backup previewed.</div>' +
+    '<div class="actions"><button class="action secondary" data-action="portable-merge" disabled>Merge with this browser</button>' +
+    '<button class="action" data-action="portable-replace" disabled>Replace saved shortcuts &amp; layout</button></div>' +
+    '<p class="fineprint">Merge keeps this browser layout, adds imported favorites and fills recent selections after existing recents. Replace changes only these four known settings keys. Everything else stays untouched. Imported backups are editable and not authenticated. Some TV browsers block file access or downloads; paste/copy remains available.</p></section>';
+}
+function showPortableExport() {
+  const json=JSON.stringify(currentPortableSetup(),null,2);
+  const text=document.getElementById("portable-export-text");
+  if(text)text.value=json;
+  return json;
+}
+function downloadPortableExport() {
+  const json=showPortableExport();
+  const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
+  const anchor=document.createElement("a");
+  anchor.href=url;
+  anchor.download="reel-theater-setup.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  notify("Backup download requested. Copy JSON if your TV browser blocks downloads.");
+}
+function copyPortableExport() {
+  const json=showPortableExport();
+  if(navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(json).then(()=>notify("Backup JSON copied locally."))
+      .catch(()=>{
+        const area=document.getElementById("portable-export-text");
+        if(area){area.focus();area.select();}
+        notify("Clipboard blocked. Select the JSON and copy manually.");
+      });
+    return;
+  }
+  const area=document.getElementById("portable-export-text");
+  if(area){area.focus();area.select();}
+  notify("Clipboard unavailable. Select and copy the displayed JSON.");
+}
+function clearPortablePreview(message="Edited. Preview the backup again before applying.") {
+  pendingPortableRaw="";
+  pendingPortableImport=null;
+  const status=document.getElementById("portable-preview-status");
+  if(status)status.textContent=message;
+  document.querySelectorAll('[data-action="portable-merge"],[data-action="portable-replace"]').forEach(button=>button.disabled=true);
+}
+function previewPortableImport() {
+  const raw=document.getElementById("portable-import-text")?.value||"";
+  const parsed=parsePortableSetup(raw);
+  if(!parsed.ok){clearPortablePreview(parsed.error);return;}
+  pendingPortableRaw=raw;
+  pendingPortableImport=parsed.setup;
+  const incoming=describePortableSetup(parsed.setup);
+  const current=describePortableSetup(currentPortableSetup());
+  const status=document.getElementById("portable-preview-status");
+  if(status)status.textContent="Incoming: "+incoming.sources+" service favorites, "+incoming.games+" game favorites, "+
+    incoming.recents+" recent shortcuts, layout "+incoming.mode+". Current browser: "+current.sources+" service favorites, "+
+    current.games+" game favorites, "+current.recents+" recent shortcuts, layout "+current.mode+"."+
+    (parsed.dropped ? " "+parsed.dropped+" duplicate or unknown entries were excluded." : " All entries recognized.")+
+    " Choose Merge or Replace; nothing has changed yet.";
+  document.querySelectorAll('[data-action="portable-merge"],[data-action="portable-replace"]').forEach(button=>button.disabled=false);
+}
+function commitPortableImport(strategy) {
+  const raw=document.getElementById("portable-import-text")?.value||"";
+  if(!pendingPortableImport||!pendingPortableRaw||raw!==pendingPortableRaw){
+    clearPortablePreview("Import changed or was not previewed. Preview again.");
+    return;
+  }
+  const current=currentPortableSetup();
+  const next=mergePortableSetup(current,pendingPortableImport,strategy);
+  const pairs=toStoragePairs(next);
+  const before=[];
+  try {
+    for(const [key] of pairs) before.push([key,window.localStorage.getItem("reel-theater:"+key)]);
+    for(const [key,value] of pairs) window.localStorage.setItem("reel-theater:"+key,value);
+  } catch {
+    // Roll back partial imports when browser storage is inaccessible or full.
+    try {
+      for(const [key,value] of before){
+        if(value===null)window.localStorage.removeItem("reel-theater:"+key);
+        else window.localStorage.setItem("reel-theater:"+key,value);
+      }
+    } catch {}
+    clearPortablePreview("Import not completed: this browser blocked local storage. Saved settings may require review.");
+    return;
+  }
+  clearPortablePreview(strategy==="merge"?"Setup merged locally.":"Setup replaced locally.");
+  render();
+  notify(strategy==="merge"?"Favorites and recent shortcuts merged.":"Portable settings replaced on this browser.");
+}
+async function loadPortableFile(input) {
+  const file=input.files?.[0];
+  if(!file)return;
+  if(file.size>PORTABLE_MAX_BYTES){
+    clearPortablePreview("Selected file exceeds the 8 KB limit.");
+    input.value="";
+    return;
+  }
+  try {
+    const text=await file.text();
+    const area=document.getElementById("portable-import-text");
+    if(area){area.value=text;clearPortablePreview("File loaded locally. Preview before applying.");}
+  } catch {
+    clearPortablePreview("This browser could not read the selected local file.");
+  }
+  input.value="";
+}
 function settings() {
   const online=navigator.onLine;
   const gamepad=Boolean(navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean));
@@ -446,7 +579,7 @@ function settings() {
     '<div class="section-heading"><div><h2>Open or install</h2><p>A home-screen shortcut is optional. REEL works as a normal website too.</p></div></div>' +
     '<section class="setup-card"><div class="eyebrow">DEVICE GUIDANCE · NOT A COMPATIBILITY CERTIFICATE</div><h3>'+guide.title+'</h3><p>'+guide.guidance+'</p>' +
     '<div class="actions"><button id="install-pwa" data-action="install-pwa" class="action"'+(installPrompt?"":' hidden')+'>Install REEL Theater</button><button class="action secondary" data-view="field">Open device test lab</button></div>' +
-    '<p class="fineprint">An Install button is shown only when the current browser actually offers an installation prompt. Fire TV Silk and Xbox Edge may support bookmarking without offering installation. Installing does not guarantee remote input or media codecs.</p></section>' +
+    '<p class="fineprint">An Install button is shown only when the current browser actually offers an installation prompt. Fire TV Silk and Xbox Edge may support bookmarking without offering installation. Installing does not guarantee remote input or media codecs.</p></section>' + portableSetupSection() +
     '<div class="section-heading"><div><h2>Environment & privacy</h2></div></div>' +
     '<section class="status-grid"><div class="status-block"><h3>Input</h3><p>'+(gamepad?'Gamepad reported by browser.':'No gamepad currently reported.')+' Keyboard arrows and Enter also work where the browser forwards them.</p></div>' +
     '<div class="status-block"><h3>Connection</h3><p>Browser reports '+(online?'online':'offline')+'. This is not a test of third-party streaming availability.</p></div>' +
@@ -565,6 +698,7 @@ document.getElementById("close-player").addEventListener("click", closePlayer);
 document.addEventListener("change", event => {
   const element = event.target;
   if (!element || !(element instanceof HTMLElement)) return;
+  if(element.id==="portable-file"){loadPortableFile(element);return;}
   if (element.id === "layout-mode") {
     const mode=normalizeMode(element.value);
     save("display-mode",mode);
@@ -586,6 +720,7 @@ document.addEventListener("pointerdown",event=>{
   markDeviceInput(event.pointerType==="touch"?"touch":"pointer",event.pointerType==="touch"?"Tap / touch":"Pointer click");
 });
 document.addEventListener("input", event => {
+  if(event.target?.id==="portable-import-text"){clearPortablePreview();return;}
   if(event.target?.id==="quick-query"){quickQuery=event.target.value.slice(0,100);renderQuickResults();return;}
   if (event.target && event.target.id === "game-query") {
     gameQuery=event.target.value.slice(0,80);
@@ -606,6 +741,12 @@ document.addEventListener("click", event => {
   }
   const button = event.target.closest("button");
   if (!button) return;
+  if(button.dataset.action==="portable-show"){showPortableExport();return;}
+  if(button.dataset.action==="portable-download"){downloadPortableExport();return;}
+  if(button.dataset.action==="portable-copy"){copyPortableExport();return;}
+  if(button.dataset.action==="portable-preview"){previewPortableImport();return;}
+  if(button.dataset.action==="portable-merge"){commitPortableImport("merge");return;}
+  if(button.dataset.action==="portable-replace"){commitPortableImport("replace");return;}
   if (button.dataset.view) { setView(button.dataset.view); return; }
   if(button.dataset.quickFilter){
     quickFilter=button.dataset.quickFilter;
