@@ -197,7 +197,8 @@ function home() {
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
-    '<div class="feature-card"><div class="tag">Manual field testing</div><h3>The Shayne Test</h3><p>Record what really works with games and video on this browser.</p><button class="action secondary" data-view="field">Open Field Lab</button></div>'<div class="feature-card"><div class="tag">Device readiness</div><h3>Input &amp; Frame Lab</h3><p>Observe remote, gamepad and touch actions, then measure local UI pacing.</p><button class="action secondary" data-view="device">Open Device Lab</button></div></section>'';
+    '<div class="feature-card"><div class="tag">Manual field testing</div><h3>The Shayne Test</h3><p>Record what really works with games and video on this browser.</p><button class="action secondary" data-view="field">Open Field Lab</button></div>' +
+    '<div class="feature-card"><div class="tag">Device readiness</div><h3>Input &amp; Frame Lab</h3><p>Observe remote, gamepad and touch actions, then measure local UI pacing.</p><button class="action secondary" data-view="device">Open Device Lab</button></div></section>';
 }
 function playbackHealthSection() {
   return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
