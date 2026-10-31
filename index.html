@@ -34,7 +34,7 @@
     </nav>
     <div class="side-bottom">
       <div class="connection-pill"><span class="signal-dot"></span><span>Local-first shell</span></div>
-      <div class="small-muted">REEL Theater <strong>Rung 4</strong><br>Xbox Edge pilot</div>
+      <div class="small-muted">REEL Theater <strong>Rung 5</strong><br>Xbox Edge pilot</div>
     </div>
   </aside>
   <div class="workspace">
@@ -51,6 +51,12 @@
     <div class="player-heading"><strong id="player-title">Now playing</strong><button id="close-player" class="action secondary" type="button">✕ Close</button></div>
     <video id="media-player" controls playsinline preload="none"></video>
     <p id="player-note" class="small-muted">Playback depends on the format, the browser, and the source connection.</p>
+    <div class="player-health" aria-label="Video playback health">
+      <strong id="player-health-status">Not started</strong>
+      <p id="player-health-guidance">No playback events yet</p>
+      <ol id="player-health-events" class="health-events"></ol>
+      <button class="action ghost small" data-action="export-health" type="button">Download diagnostics</button>
+    </div>
   </div>
 </div>
 <input id="local-file" type="file" accept="video/*,audio/*,.mp4,.webm,.mp3,.m4a,.ogg" hidden aria-label="Choose a local media file">
