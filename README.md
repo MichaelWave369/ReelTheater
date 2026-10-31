@@ -85,6 +85,19 @@ Physical Xbox/Fire TV remote testing is still required. Passing software tests c
 
 Xbox Edge, Amazon Silk, iOS Safari and actual mobile hardware still require manual validation.
 
+## Rung 8 (v0.8.0) — Device Readiness Lab
+
+- **Device Lab** in the main navigation and Home quick links: voluntary keyboard/remote/gamepad/touch input detection
+- Current-browser capability hints (presentation mode, gamepad connected, touch capability, service worker control), without claiming certified compatibility
+- At most 20 semantic input events in memory, no full typed keys, device identifiers or pointer coordinates
+- Escape / gamepad B ends capture safely, restoring menu controls without accidental double-Back exits
+- Optional 60-sample visible-tab frame pacing (median, p95, longest interval), explicitly **not video FPS or device benchmarking**
+- Explicit JSON download containing only bounded semantic observations; no hidden uploads or persistent diagnostic storage
+- Real Chromium integration tests for pointer/touch, remote-like keys, mock gamepad input, frame pacing and export
+- [Device readiness acceptance guide](docs/DEVICE_READINESS_RUNG8.md)
+
+Xbox, Fire TV Silk, Android and iOS still need physical-device verification. This lab helps perform it but cannot substitute for it.
+
 ## Run locally
 
 Build the deployable site with its real PWA icons, then serve the generated static folder:
@@ -119,8 +132,9 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 4. **Rung 4:** Multi-device web shell and PWA assets (merged).
 5. **Rung 5:** Curated original-game library and playback diagnostics (merged).
 6. **Rung 6:** Remote input ownership, TV focus and modal hardening (merged).
-7. **Rung 7:** Chromium device-profile integration checks and Pages deployment gate (this PR).
-8. **Rung 8:** Real Fire TV/Xbox/mobile hardware validation and performance tuning, then consider native wrappers if necessary.
+7. **Rung 7:** Chromium profiles and browser-gated Pages deployments (merged).
+8. **Rung 8:** Voluntary on-device input and frame pacing readiness lab (this PR).
+9. **Rung 9:** Physical Fire TV/Xbox/mobile acceptance, then measured performance fixes and native wrapper decisions.
 
 ## Rights and scope
 

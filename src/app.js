@@ -5,6 +5,7 @@ import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remote
 import {GAMES,GAME_CATEGORIES,filterGames,parseGameFavorites} from "./games.js";
 import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGuidance} from "./playback.js";
 import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} from "./remote.js";
+import {makeDeviceLog,appendDeviceInput,inputLabel,gamepadLabel,frameStats,safeDeviceReport} from "./device.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -13,7 +14,7 @@ const filePicker = document.getElementById("local-file");
 const toast = document.getElementById("toast");
 const SAMPLE_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const REEL_URL = "https://github.com/MichaelWave369/ReelCommons";
-const views = ["home", "watch", "live", "arcade", "library", "field", "settings"];
+const views = ["home", "watch", "live", "arcade", "library", "field", "device", "settings"];
 const launchedAt = performance.now();
 let view = "home";
 let arcadeCleanup = null;
@@ -32,6 +33,12 @@ let gameFavoritesOnly = false;
 let playbackSession = createPlaybackSession();
 let installPrompt = null;
 let currentMode = "desktop";
+let deviceLog = makeDeviceLog();
+let deviceCapture = false;
+let lastDevicePadLabel = "";
+let deviceBackNeedsRelease = false;
+let frameSampleToken = 0;
+let frameSampling = false;
 let playerOpener = null;
 const appShell = document.querySelector(".app-shell");
 
@@ -190,7 +197,8 @@ function home() {
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
     '<div class="feature-card"><div class="tag">Media discovery</div><h3>One-stop Source Guide</h3><p>Official free movies and live-TV destinations. No add-ons to install.</p><button class="action secondary" data-view="watch">Browse official services</button></div>' +
-    '<div class="feature-card"><div class="tag">Xbox field testing</div><h3>The Shayne Test</h3><p>Check which services and games actually work on your Series X, then download an honest report.</p><button class="action secondary" data-view="field">Open Field Lab</button></div></section>';
+    '<div class="feature-card"><div class="tag">Manual field testing</div><h3>The Shayne Test</h3><p>Record what really works with games and video on this browser.</p><button class="action secondary" data-view="field">Open Field Lab</button></div>' +
+    '<div class="feature-card"><div class="tag">Device readiness</div><h3>Input &amp; Frame Lab</h3><p>Observe remote, gamepad and touch actions, then measure local UI pacing.</p><button class="action secondary" data-view="device">Open Device Lab</button></div></section>';
 }
 function playbackHealthSection() {
   return '<section class="health-panel" aria-label="Playback diagnostics"><div class="section-heading"><div><h2>Playback Health</h2><p>Live media-element observations from this session, not an external-provider availability check.</p></div></div>' +
@@ -263,6 +271,118 @@ function arcade() {
     gameSection();
 }
 
+function devicePage() {
+  return '<div class="page-heading"><div class="eyebrow">RUNG 8 · DEVICE READINESS</div><h1>What does this browser actually see?</h1>' +
+    '<p>Run an input test on this specific device, then optionally sample visible-tab frame pacing. No accounts, no hardware serials, no external stream probes.</p></div>' +
+    '<section class="device-status-grid" aria-label="Browser capability hints">' +
+    '<div class="device-stat"><span class="eyebrow">PRESENTATION</span><strong id="device-layout">Checking</strong><span>Chosen display mode, not a device certification</span></div>' +
+    '<div class="device-stat"><span class="eyebrow">GAMEPAD</span><strong id="device-pad">Checking</strong><span>Connection as reported by Gamepad API</span></div>' +
+    '<div class="device-stat"><span class="eyebrow">INPUT</span><strong id="device-touch">Checking</strong><span>Touch capability hint</span></div>' +
+    '<div class="device-stat"><span class="eyebrow">OFFLINE SHELL</span><strong id="device-shell">Checking</strong><span>Current service worker control, not a download test</span></div></section>' +
+    '<section class="device-workbench" aria-label="Input observation workbench"><div class="section-heading"><div><h2>Test remote, gamepad or touch</h2>' +
+    '<p>Start, then press arrow keys or D-pad, A/Select, B/Back, or tap the target. Only named navigation actions are recorded. Keys you type elsewhere are never captured.</p></div></div>' +
+    '<div class="actions"><button data-action="device-start" class="action">Start input test</button><button data-action="device-stop" class="action secondary" disabled>Stop test</button></div>' +
+    '<div id="device-capture-target" class="device-capture-target" tabindex="0" role="group" aria-label="Input test target. Escape or gamepad B to stop.">Tap here or focus after Start<span id="device-capture-status">Not recording</span></div>' +
+    '<p class="fineprint">Keyboard Escape or controller B stops recording after showing that action. If a TV browser does not forward remote keys, there will be no false success.</p>' +
+    '<div class="device-input-history"><strong>Recent recognized actions <span id="device-input-count">0</span></strong><ol id="device-input-events" aria-live="polite"><li>No input observed yet</li></ol></div></section>' +
+    '<section class="device-workbench" aria-label="Local display pacing"><div class="section-heading"><div><h2>Visible-tab frame pacing</h2>' +
+    '<p>Sample 60 consecutive animation intervals. This is UI scheduling on this page, not gaming FPS, video decode speed, first-frame latency, or a universal device benchmark.</p></div></div>' +
+    '<div class="actions"><button data-action="device-frame" class="action secondary">Run frame sample</button></div>' +
+    '<p id="device-frame-result" class="device-frame-result" aria-live="polite">No sample taken.</p></section>' +
+    '<section class="device-workbench"><div class="section-heading"><div><h2>Share only what you choose</h2><p>Export a small unsigned JSON report, without raw keystrokes, file names, video URLs, gamepad identifiers, exact hardware details or browser fingerprint.</p></div></div>' +
+    '<button class="action" data-action="device-export">Download local device report</button>' +
+    '<p class="fineprint">These observations live in memory only and disappear on reload. A downloaded file is editable and cannot independently establish hardware compatibility or media playback.</p>' +
+    '<button data-view="field" class="action ghost">Open manual provider and game test log</button></section>';
+}
+function updateDeviceLab() {
+  if(view!=="device")return;
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+  set("device-layout",currentMode.toUpperCase());
+  set("device-pad",controllerWasConnected?"Detected":"None reported");
+  set("device-touch",(navigator.maxTouchPoints||0)>0?"Hint present":"Not reported");
+  set("device-shell",navigator.serviceWorker?.controller?"Controlling page":"Unconfirmed");
+  const target=document.getElementById("device-capture-target");
+  const on=document.querySelector('[data-action="device-start"]');
+  const off=document.querySelector('[data-action="device-stop"]');
+  if(target)target.classList.toggle("recording",deviceCapture);
+  if(on)on.disabled=deviceCapture;
+  if(off)off.disabled=!deviceCapture;
+  set("device-capture-status",deviceCapture?"Recording navigation actions. Escape or B stops.":"Not recording");
+  set("device-input-count",String(deviceLog.inputs.length));
+  const list=document.getElementById("device-input-events");
+  if(list){
+    list.replaceChildren();
+    for(const entry of deviceLog.inputs.slice().reverse()){
+      const li=document.createElement("li");
+      li.textContent=entry.type+": "+entry.action;
+      list.appendChild(li);
+    }
+    if(!deviceLog.inputs.length){const li=document.createElement("li");li.textContent="No recognized input yet";list.appendChild(li);}
+  }
+  const button=document.querySelector('[data-action="device-frame"]');
+  if(button){button.disabled=frameSampling;button.textContent=frameSampling?"Sampling visible frames...":"Run frame sample";}
+  if(!frameSampling && deviceLog.frame){
+    const f=deviceLog.frame;
+    set("device-frame-result",f.samples+" intervals · median "+f.medianMs+" ms · p95 "+f.p95Ms+" ms · longest "+f.longestMs+" ms. Not video/game FPS.");
+  }
+}
+function stopDeviceCapture() {
+  deviceCapture=false;
+  lastDevicePadLabel="";
+  updateDeviceLab();
+  const button=document.querySelector('[data-action="device-start"]');
+  if(button)focusAndReveal(button);
+}
+function markDeviceInput(kind,label) {
+  if(!deviceCapture || view!=="device")return;
+  deviceLog=appendDeviceInput(deviceLog,kind,label);
+  updateDeviceLab();
+}
+function startDeviceCapture() {
+  deviceBackNeedsRelease=false;
+  deviceLog={...deviceLog,inputs:[]};
+  deviceCapture=true;
+  lastDevicePadLabel="";
+  updateDeviceLab();
+  focusAndReveal(document.getElementById("device-capture-target"));
+}
+function cancelFrameSample() {
+  frameSampleToken++;
+  frameSampling=false;
+}
+function startDeviceFrameSample() {
+  if(frameSampling || view!=="device")return;
+  if(document.hidden){notify("Open the tab visibly before measuring frame pacing.");return;}
+  frameSampling=true;
+  deviceLog={...deviceLog,frame:null};
+  const token=++frameSampleToken, samples=[];
+  let prev=null;
+  updateDeviceLab();
+  const step=now=>{
+    if(token!==frameSampleToken || view!=="device" || document.hidden){
+      if(token===frameSampleToken){frameSampling=false;updateDeviceLab();notify("Frame sample interrupted; no result recorded.");}
+      return;
+    }
+    if(prev!==null)samples.push(now-prev);
+    prev=now;
+    if(samples.length<60){requestAnimationFrame(step);return;}
+    deviceLog={...deviceLog,frame:frameStats(samples)};
+    frameSampling=false;
+    updateDeviceLab();
+  };
+  requestAnimationFrame(step);
+}
+function exportDeviceLab() {
+  const report=safeDeviceReport(deviceLog,{
+    mode:currentMode,gamepadDetected:controllerWasConnected,touchAvailable:(navigator.maxTouchPoints||0)>0,
+    offline:!navigator.onLine,serviceWorker:Boolean(navigator.serviceWorker?.controller)
+  });
+  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:"application/json"}));
+  const a=document.createElement("a");a.href=url;a.download="reel-device-readiness.json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  notify("Device report download requested. Some TV browsers block downloads.");
+}
 function settings() {
   const online=navigator.onLine;
   const gamepad=Boolean(navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean));
@@ -285,7 +405,7 @@ function settings() {
     '<div class="info-panel"><p><strong>TV / Fire remote:</strong> D-pad or arrow keys navigate if delivered by the browser; center or Enter selects. Back or Escape returns Home. Some TV browsers use their own cursor instead of key navigation.</p><p><strong>Xbox gamepad:</strong> D-pad or left stick navigates; A selects; B returns Home or closes player. Arcade uses horizontal input.</p><p><strong>Touch:</strong> use bottom navigation, tap cards, scroll naturally, and use on-screen keyboard for search.</p><p><strong>Playback:</strong> Commercial DRM and SMB/USB library browsing still require authorized supported apps or future native/media-server integration.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
 }
 
-const pages = {home, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), settings};
+const pages = {home, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), device:devicePage, settings};
 function render() {
   if (arcadeCleanup) { arcadeCleanup(); arcadeCleanup = null; }
   main.innerHTML = pages[view]();
@@ -307,10 +427,12 @@ function render() {
   applyMode();
   updateConnection();
   renderPlaybackHealth();
+  updateDeviceLab();
 }
 function setView(target) {
   if (!views.includes(target)) return;
   if (!modal.hidden) closePlayer();
+  if(view==="device" && target!=="device"){stopDeviceCapture();cancelFrameSample();}
   view = target;
   if (target === "live") sourceCategory = "live";
   else if (target === "watch") sourceCategory = "all";
@@ -406,6 +528,10 @@ document.addEventListener("change", event => {
   const indicator = Array.from(document.querySelectorAll("[data-field-indicator]")).find(el=>el.dataset.fieldIndicator===id);
   if (indicator) indicator.textContent = FIELD_STATES.find(state=>state.id===(updated.entries[id]?.status || "untested")).label;
 });
+document.addEventListener("pointerdown",event=>{
+  if(view!=="device" || !deviceCapture || !event.target?.closest?.("#device-capture-target"))return;
+  markDeviceInput(event.pointerType==="touch"?"touch":"pointer",event.pointerType==="touch"?"Tap / touch":"Pointer click");
+});
 document.addEventListener("input", event => {
   if (event.target && event.target.id === "game-query") {
     gameQuery=event.target.value.slice(0,80);
@@ -421,6 +547,11 @@ document.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.view) { setView(button.dataset.view); return; }
+  const deviceAction=button.dataset.action;
+  if(deviceAction==="device-start"){startDeviceCapture();return;}
+  if(deviceAction==="device-stop"){stopDeviceCapture();return;}
+  if(deviceAction==="device-frame"){startDeviceFrameSample();return;}
+  if(deviceAction==="device-export"){exportDeviceLab();return;}
   if (button.dataset.gameCategory) {
     gameCategory=button.dataset.gameCategory;
     document.querySelectorAll("[data-game-category]").forEach(el=>{
@@ -541,6 +672,15 @@ function trapModalTab(event) {
 }
 
 document.addEventListener("keydown", event => {
+  if(view==="device" && deviceCapture && modal.hidden) {
+    const action=inputLabel(event.key);
+    if(action){
+      event.preventDefault();
+      markDeviceInput("keyboard",action);
+      if(event.key==="Escape" || ["Backspace","BrowserBack","GoBack","Back"].includes(event.key))stopDeviceCapture();
+      return;
+    }
+  }
   if (!modal.hidden) {
     if (event.key==="Tab") {trapModalTab(event);return;}
     if (remoteBackKey(event.key)) {event.preventDefault();closePlayer();return;}
@@ -569,6 +709,23 @@ function gamepadLoop(now) {
     document.getElementById("controller-status").textContent=connected?"Controller connected":"Keyboard / Remote";
     controllerWasConnected=connected;
     if(normalizeMode(read("display-mode","auto"))==="auto")applyMode();
+    updateDeviceLab();
+  }
+  if(view==="device" && deviceCapture && modal.hidden){
+    const intent=gamepadIntent(pad);
+    const label=gamepadLabel(intent,pad);
+    if(label && label!==lastDevicePadLabel){
+      markDeviceInput("gamepad",label);
+      if(label==="B / Back"){deviceBackNeedsRelease=true;stopDeviceCapture();}
+    }
+    lastDevicePadLabel=label||"";
+    lastPadAction=""; // Re-arm menu controller after explicit capture stop.
+    requestAnimationFrame(gamepadLoop);
+    return;
+  }
+  if(deviceBackNeedsRelease){
+    if(pad?.buttons?.[1]?.pressed){requestAnimationFrame(gamepadLoop);return;}
+    deviceBackNeedsRelease=false;
   }
   if(pad) {
     const action=gamepadIntent(pad,{gameFocused:arcadeControlsActive() && modal.hidden});

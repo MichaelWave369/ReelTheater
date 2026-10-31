@@ -152,3 +152,27 @@ html[data-ui-mode="touch"] .game-grid{grid-template-columns:repeat(2,minmax(0,1f
 html[data-ui-mode="tv"] #arcade-control-status{font-size:16px}
 html[data-ui-mode="touch"] #arcade-control-status{font-size:12px}
 @media(prefers-reduced-motion:reduce){:is(.action,.tile,.feature-card,.game-card){transition:none!important;transform:none!important}}
+
+/* Rung 8: Device Readiness Lab. Self-observation only; no auto device certification. */
+.device-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:24px 0}
+.device-stat{display:flex;flex-direction:column;gap:9px;min-width:0;padding:20px 17px;border:1px solid #3d4b6f;border-radius:15px;background:linear-gradient(160deg,#192540,#101a2f)}
+.device-stat strong{font-size:clamp(18px,2vw,24px);color:#e5dcff}
+.device-stat>span:last-child{font-size:11px;color:#a6b7d5;line-height:1.5}
+.device-workbench{border:1px solid #415477;border-radius:18px;background:linear-gradient(140deg,#14213a,#0c1428);padding:22px;margin:20px 0}
+.device-workbench .section-heading{margin:2px 0 18px}
+.device-workbench .section-heading h2{font-size:clamp(21px,2.3vw,27px)}
+.device-workbench .actions{flex-wrap:wrap}
+.device-capture-target{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;margin-top:18px;min-height:170px;padding:25px;border:2px dashed #6774a1;border-radius:16px;background:#101832;color:#c3d4ed;font-size:18px;font-weight:800;text-align:center;touch-action:manipulation}
+.device-capture-target:focus{outline:4px solid #aef1ff;outline-offset:4px}
+.device-capture-target.recording{border-style:solid;border-color:#86dacd;background:#15353e}
+.device-capture-target span{font-size:13px;font-weight:500;color:#b0c7dc}
+.device-input-history{margin-top:20px;padding:15px;border:1px solid #36476a;border-radius:11px;background:#0d172c}
+.device-input-history strong{color:#cfbaff}
+.device-input-history ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 26px;list-style-position:inside;padding:0;margin:12px 0 0;color:#bacbe7;font-size:13px}
+.device-input-history li{padding:4px}
+.device-frame-result{font-size:15px;color:#dbebfe;line-height:1.6;font-variant-numeric:tabular-nums}
+@media(max-width:1250px){.device-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:660px){.device-status-grid{grid-template-columns:1fr}.device-workbench{padding:16px}.device-input-history ol{grid-template-columns:1fr}.device-capture-target{min-height:145px}}
+html[data-ui-mode="tv"] .device-capture-target{font-size:22px;min-height:215px}
+html[data-ui-mode="tv"] .device-stat>span:last-child{font-size:14px}
+html[data-ui-mode="touch"] .device-workbench .action{min-height:52px}
