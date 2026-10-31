@@ -1,11 +1,11 @@
 {
   "name": "reel-theater",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
-  "description": "Local-first entertainment launcher with adaptive controller polling and in-session UI redraw diagnostics.",
+  "description": "Local-first TV/media launcher with opt-in codec hints and first video-frame callback diagnostics.",
   "scripts": {
-    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check src/games.js && node --check src/playback.js && node --check src/remote.js && node --check src/device.js && node --check src/quicklaunch.js && node --check src/portable.js && node --check src/performance.js && node --check playwright.config.mjs && node --check e2e/browser.spec.mjs && node --check e2e/device.spec.mjs && node --check e2e/quicklaunch.spec.mjs && node --check e2e/portable.spec.mjs && node --check e2e/performance.spec.mjs && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
+    "test": "node --check src/app.js && node --check src/arcade.js && node --check src/platform.js && node --check src/field.js && node --check src/games.js && node --check src/playback.js && node --check src/media-support.js && node --check src/remote.js && node --check src/device.js && node --check src/quicklaunch.js && node --check src/portable.js && node --check src/performance.js && node --check playwright.config.mjs && node --check e2e/browser.spec.mjs && node --check e2e/device.spec.mjs && node --check e2e/quicklaunch.spec.mjs && node --check e2e/portable.spec.mjs && node --check e2e/performance.spec.mjs && node --check e2e/playback-reality.spec.mjs && node --check sw.js && node --check scripts/generate-icons.mjs && node --test tests/*.test.mjs",
     "build": "node scripts/build.mjs",
     "test:browser": "playwright test --config=playwright.config.mjs"
   },
