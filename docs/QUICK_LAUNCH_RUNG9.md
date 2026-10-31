@@ -37,3 +37,8 @@ REEL Theater should open games and legitimate streaming destinations in fewer cl
 - Provider playback and game performance must be assessed separately, not inferred from a Quick Launch click.
 
 Do not interpret automated Chromium emulation as certification of any TV browser hardware.
+
+
+## Narrow-screen TV mode regression found by CI
+
+The first browser run found a genuine overlap on a phone viewport when **TV / remote** presentation was manually selected: the long TV sidebar made the Field Lab button partially covered by Device Lab. Rung 9 now constrains that override on narrow screens to a horizontally scrollable, bottom-anchored remote menu with stable touch/click targets. A dedicated Chromium regression test navigates Quick Launch, Field Lab, Device Lab, Watch and Home under that preference. The fix does not relabel a phone as a certified television.
