@@ -107,3 +107,20 @@ test("offline cached app shell includes unified shortcuts and remains navigable"
   await page.locator('#primary-nav [data-view="quick"]').click();
   await expect(page.locator("#quick-results .quick-card")).toHaveCount(11);
 });
+
+
+test("manual TV layout still has clickable, nonoverlapping navigation on phones",async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=="phone-touch-emulation","Narrow TV override regression");
+  await page.goto("/");
+  await page.locator('#primary-nav [data-view="settings"]').click();
+  await page.locator("#layout-mode").selectOption("tv");
+  await expect(page.locator("html")).toHaveAttribute("data-ui-mode","tv");
+  for(const view of ["quick","field","device","watch","home"]){
+    const nav=page.locator('#primary-nav [data-view="'+view+'"]');
+    await nav.click();
+    await expect(nav).toHaveAttribute("aria-current","page");
+  }
+  const nav=page.locator("#primary-nav");
+  await expect(nav).toBeVisible();
+  await expect(page.locator(".sidebar")).toHaveCSS("position","fixed");
+});
