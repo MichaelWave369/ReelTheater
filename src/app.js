@@ -6,6 +6,7 @@ import {GAMES,GAME_CATEGORIES,filterGames,parseGameFavorites} from "./games.js";
 import {createPlaybackSession,recordPlaybackEvent,safePlaybackSummary,playbackGuidance} from "./playback.js";
 import {FOCUSABLE_SELECTOR,pickSpatialIndex,gamepadIntent,isArcadeControlKey} from "./remote.js";
 import {makeDeviceLog,appendDeviceInput,inputLabel,gamepadLabel,frameStats,safeDeviceReport} from "./device.js";
+import {QUICK_ITEMS,QUICK_FILTERS,quickItem,favoriteKeys,parseRecents,recordRecent,quickResults,quickHomeItems} from "./quicklaunch.js";
 
 const main = document.getElementById("main-content");
 const modal = document.getElementById("player-modal");
@@ -14,7 +15,7 @@ const filePicker = document.getElementById("local-file");
 const toast = document.getElementById("toast");
 const SAMPLE_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const REEL_URL = "https://github.com/MichaelWave369/ReelCommons";
-const views = ["home", "watch", "live", "arcade", "library", "field", "device", "settings"];
+const views = ["home", "quick", "watch", "live", "arcade", "library", "field", "device", "settings"];
 const launchedAt = performance.now();
 let view = "home";
 let arcadeCleanup = null;
@@ -33,6 +34,8 @@ let gameFavoritesOnly = false;
 let playbackSession = createPlaybackSession();
 let installPrompt = null;
 let currentMode = "desktop";
+let quickQuery = "";
+let quickFilter = "all";
 let deviceLog = makeDeviceLog();
 let deviceCapture = false;
 let lastDevicePadLabel = "";
@@ -147,7 +150,7 @@ function renderSourceList() {
       '<button class="source-fav" data-source-favorite="' + source.id + '" aria-pressed="' + saved + '" aria-label="' + (saved ? "Remove " : "Save ") + source.name + (saved ? " from favorites" : " to favorites") + '">' + (saved ? "♥" : "♡") + '</button></div>' +
       '<p>' + source.description + '</p><div class="source-meta"><span>' + source.price + '</span><span>' + source.xbox + '</span></div>' +
       '<span class="source-self-report">My device: ' + (myResult && myResult.status !== 'untested' ? FIELD_STATES.find(state=>state.id===myResult.status).label : 'Not tested') + '</span>' +
-      '<a class="action secondary source-open" href="' + source.url + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + source.name + ' official site">Open official site ↗</a></article>';
+      '<a class="action secondary source-open" href="' + source.url + '" data-quick-link="source:' + source.id + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + source.name + ' official site">Open official site ↗</a></article>';
   }).join("") : '<div class="source-empty"><strong>No matching services.</strong><p>Try another category or clear Favorites. No hidden repositories are being searched.</p></div>';
 }
 function gameFavorites() {
@@ -179,15 +182,63 @@ function renderGameCards() {
       '<button class="source-fav" data-game-favorite="'+game.id+'" aria-pressed="'+favorite+'" aria-label="'+(favorite?'Remove ':'Save ')+game.name+(favorite?' from favorites':' to favorites')+'">'+(favorite?'♥':'♡')+'</button></div>' +
       '<p>'+game.description+'</p><div class="source-meta"><span>'+game.platform+'</span><span>'+game.evidence+'</span></div>' +
       '<p class="source-self-report">My device: '+ownStatus+'</p>' +
-      '<a class="action secondary game-open" href="'+game.url+'" target="_blank" rel="noopener noreferrer">'+(game.entry==="game"?'Open browser game ↗':'View project ↗')+'</a></article>';
+      '<a class="action secondary game-open" href="'+game.url+'" data-quick-link="game:'+game.id+'" target="_blank" rel="noopener noreferrer">'+(game.entry==="game"?'Open browser game ↗':'View project ↗')+'</a></article>';
   }).join("") : '<div class="source-empty"><strong>No matches here.</strong><p>Clear search or Favorites. We do not invent games to fill a grid.</p></div>';
+}
+function recentQuickLinks() {
+  return parseRecents(read("recent-links","[]"));
+}
+function favoritesQuickLinks() {
+  return favoriteKeys({sources:sourceFavorites(),games:gameFavorites()});
+}
+function quickCard(item,{favorite=false,recent=false,compact=false}={}) {
+  const label=item.kind==="source"?"Source":"Original game";
+  return '<article class="quick-card'+(compact?' compact':'')+'">' +
+    '<div class="quick-card-header"><span class="quick-kind">'+label+' · '+item.group+'</span>' +
+    (compact?'':'<button class="source-fav" data-quick-favorite="'+item.key+'" aria-label="'+(favorite?'Remove ':'Save ')+item.name+(favorite?' from favorites':' to favorites')+'" aria-pressed="'+favorite+'">'+(favorite?'♥':'♡')+'</button>')+'</div>' +
+    '<h3>'+item.name+'</h3>' +
+    (compact?'':'<p>'+item.description+'</p>') +
+    (recent?'<span class="quick-recent-label">Previously selected on this browser</span>':'') +
+    '<a class="action secondary quick-open" href="'+item.url+'" data-quick-link="'+item.key+'" rel="noopener noreferrer" target="_blank">'+item.cta+' ↗</a>' +
+    '</article>';
+}
+function quickHome() {
+  const favorites=favoritesQuickLinks(),recent=recentQuickLinks();
+  const selected=quickHomeItems({favorites,recent});
+  return '<section class="quick-home" aria-label="Your quick-launch shortcuts">' +
+    '<div class="section-heading"><div><h2>One-click shortcuts</h2><p>Favorite games and official services together, with your recent selections.</p></div><button class="action secondary" data-view="quick">See all shortcuts</button></div>' +
+    (selected.length?'<div class="quick-grid compact-grid">'+selected.map(item=>quickCard(item,{favorite:favorites.includes(item.key),recent:recent.includes(item.key),compact:true})).join("")+'</div>':
+      '<div class="quick-empty"><p>Nothing saved yet. Favorite a game or official streaming service and it appears here.</p>' +
+      '<button class="action" data-view="quick">Browse all shortcuts</button></div>') +
+    '<p class="fineprint">Recently selected links do not mean a game loaded or a stream played. Shortcuts are private to this browser.</p></section>';
+}
+function quickPage() {
+  return '<div class="page-heading"><div class="eyebrow">RUNG 9 · QUICK LAUNCH</div><h1>Everything, fewer clicks.</h1>' +
+    '<p>Find your games and official streaming destinations in one place. No accounts, no third-party add-ons, and no links we invented.</p></div>' +
+    '<section class="quick-launch" aria-label="Unified quick-launch directory">' +
+    '<div class="source-controls"><label class="source-search-label" for="quick-query">Search all shortcuts<input id="quick-query" type="search" placeholder="Search games, movies, live TV..." autocomplete="off"></label>' +
+    '<div class="source-filters" aria-label="Quick launch filters">'+QUICK_FILTERS.map(f=>'<button class="source-chip'+(quickFilter===f.id?' selected':'')+'" data-quick-filter="'+f.id+'" aria-pressed="'+(quickFilter===f.id)+'">'+f.label+'</button>').join("")+'</div></div>' +
+    '<p class="source-count" id="quick-count" aria-live="polite"></p><div id="quick-results" class="quick-grid"></div>' +
+    '<div class="quick-privacy"><p>Recents are recorded only when you select an external link on this browser. This is a click history, not proof of page load, playable media or Xbox/Fire TV compatibility.</p>' +
+    '<button class="action ghost" data-action="clear-quick-recents">Clear recent selections</button></div></section>';
+}
+function renderQuickResults() {
+  const root=document.getElementById("quick-results");
+  if(!root)return;
+  const favorites=favoritesQuickLinks(),recent=recentQuickLinks();
+  const results=quickResults({query:quickQuery,filter:quickFilter,favorites,recent});
+  const count=document.getElementById("quick-count");
+  if(count) count.textContent=results.length+" of "+QUICK_ITEMS.length+" curated shortcuts";
+  root.innerHTML=results.length?
+    results.map(item=>quickCard(item,{favorite:favorites.includes(item.key),recent:recent.includes(item.key)})).join(""):
+    '<div class="source-empty"><strong>Nothing matches.</strong><p>Clear the search or choose All. Favorite or recent links appear only when you select them.</p></div>';
 }
 function hero() {
   return '<section class="hero"><div class="hero-copy"><div class="eyebrow">✦ YOUR LIVING ROOM. REIMAGINED.</div><h1>Less waiting.<br><em>More watching.</em></h1><p>A home theater that gets out of your way. Watch a sample, play a real arcade game, or bring your own media. No accounts. No mystery repositories.</p><div class="actions"><button data-action="demo" class="action">▷ Watch demo video</button><button data-view="arcade" class="action secondary">✧ Open Arcade</button><button data-view="watch" class="action ghost">⌕ Discover free TV</button></div></div></section>';
 }
 function home() {
   const progress = safeProgress();
-  return hero() +
+  return hero() + quickHome() +
     '<div class="section-heading"><div><h2>Jump right in</h2><p>No loading screens between you and the good stuff.</p></div></div>' +
     '<section class="tile-grid" aria-label="Quick actions">' +
     '<button class="tile" data-action="' + (progress > 0 ? 'resume' : 'demo') + '"><span class="icon">▶</span><h3>' + (progress > 0 ? 'Continue Watching' : 'Try the Player') + '</h3><p>' + (progress > 0 ? 'Resume demo at ' + timestamp(progress) : 'Real HTML5 video, not a fake play button.') + '</p></button>' +
@@ -405,7 +456,7 @@ function settings() {
     '<div class="info-panel"><p><strong>TV / Fire remote:</strong> D-pad or arrow keys navigate if delivered by the browser; center or Enter selects. Back or Escape returns Home. Some TV browsers use their own cursor instead of key navigation.</p><p><strong>Xbox gamepad:</strong> D-pad or left stick navigates; A selects; B returns Home or closes player. Arcade uses horizontal input.</p><p><strong>Touch:</strong> use bottom navigation, tap cards, scroll naturally, and use on-screen keyboard for search.</p><p><strong>Playback:</strong> Commercial DRM and SMB/USB library browsing still require authorized supported apps or future native/media-server integration.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
 }
 
-const pages = {home, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), device:devicePage, settings};
+const pages = {home, quick:quickPage, watch, live, arcade, library, field:()=>fieldMarkup(currentFieldReport()), device:devicePage, settings};
 function render() {
   if (arcadeCleanup) { arcadeCleanup(); arcadeCleanup = null; }
   main.innerHTML = pages[view]();
@@ -418,6 +469,8 @@ function render() {
   if (view === "arcade") arcadeCleanup = startArcade(document.getElementById("signal-breaker"), document.getElementById("start-game"));
   const search = document.getElementById("source-query");
   if (search) { search.value = sourceQuery; renderSourceList(); }
+  const quickSearch = document.getElementById("quick-query");
+  if(quickSearch){quickSearch.value=quickQuery;renderQuickResults();}
   const gameSearch = document.getElementById("game-query");
   if (gameSearch) { gameSearch.value=gameQuery; renderGameCards(); }
   if (view === "field") {
@@ -533,6 +586,7 @@ document.addEventListener("pointerdown",event=>{
   markDeviceInput(event.pointerType==="touch"?"touch":"pointer",event.pointerType==="touch"?"Tap / touch":"Pointer click");
 });
 document.addEventListener("input", event => {
+  if(event.target?.id==="quick-query"){quickQuery=event.target.value.slice(0,100);renderQuickResults();return;}
   if (event.target && event.target.id === "game-query") {
     gameQuery=event.target.value.slice(0,80);
     renderGameCards();
@@ -544,9 +598,46 @@ document.addEventListener("input", event => {
   }
 });
 document.addEventListener("click", event => {
+  const link=event.target?.closest?.("a[data-quick-link]");
+  if(link && !event.defaultPrevented){
+    const item=quickItem(link.dataset.quickLink);
+    // Only record the intended, unmodified curated destination, never user content.
+    if(item && link.href===item.url)save("recent-links",JSON.stringify(recordRecent(recentQuickLinks(),item.key)));
+  }
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.view) { setView(button.dataset.view); return; }
+  if(button.dataset.quickFilter){
+    quickFilter=button.dataset.quickFilter;
+    document.querySelectorAll("[data-quick-filter]").forEach(el=>{
+      const active=el.dataset.quickFilter===quickFilter;
+      el.classList.toggle("selected",active);
+      el.setAttribute("aria-pressed",String(active));
+    });
+    renderQuickResults();return;
+  }
+  if(button.dataset.quickFavorite){
+    const item=quickItem(button.dataset.quickFavorite);
+    if(!item)return;
+    if(item.kind==="source"){
+      const ids=sourceFavorites();
+      save("favorite-sources",JSON.stringify(ids.includes(item.id)?ids.filter(id=>id!==item.id):[...ids,item.id]));
+    }else{
+      const ids=gameFavorites();
+      save("favorite-games",JSON.stringify(ids.includes(item.id)?ids.filter(id=>id!==item.id):[...ids,item.id]));
+    }
+    renderQuickResults();
+    const next=Array.from(document.querySelectorAll("[data-quick-favorite]")).find(el=>el.dataset.quickFavorite===item.key);
+    if(next)focusAndReveal(next);
+    else document.querySelector('[data-quick-filter="favorites"]')?.focus();
+    return;
+  }
+  if(button.dataset.action==="clear-quick-recents"){
+    save("recent-links","[]");
+    renderQuickResults();
+    notify("Recent selections cleared on this browser.");
+    return;
+  }
   const deviceAction=button.dataset.action;
   if(deviceAction==="device-start"){startDeviceCapture();return;}
   if(deviceAction==="device-stop"){stopDeviceCapture();return;}
