@@ -6,3 +6,28 @@
 @media(max-width:950px){.app-shell{grid-template-columns:88px minmax(0,1fr)}.sidebar{padding:23px 10px}.brand{padding:0 9px;margin-bottom:45px}.brand>span:last-child,.nav-group-title,.nav-link{font-size:0}.nav-stack{gap:10px}.nav-link{justify-content:center;padding:0}.nav-symbol{font-size:26px}.side-bottom{display:none}.hero{min-height:315px}.tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.app-shell{display:flex;flex-direction:column}.sidebar{position:sticky;top:0;z-index:20;min-height:auto;padding:9px 10px;background:#0c1325ef;backdrop-filter:blur(15px)}.brand{display:none}.nav-stack{display:flex;gap:2px;justify-content:space-between}.nav-link{min-width:42px;min-height:42px;padding:0}.nav-symbol{font-size:23px}.topbar{height:58px}.top-label{font-size:9px}.workspace main{padding:8px 16px 35px}.hero{padding:25px;min-height:350px}.hero:after{right:-5%;font-size:270px}.hero h1{font-size:42px}.tile-grid,.card-grid,.status-grid{grid-template-columns:1fr}.tile{min-height:150px}.footer{padding:16px;flex-wrap:wrap}.controller-status{display:none}.section-heading{margin-top:30px}}
 @media(prefers-reduced-motion:no-preference){.tile,.action,.feature-card{transition:transform .16s,border-color .16s,filter .16s}}
+
+/* Rung 2: official source guide, designed for TV distance and controller focus */
+.source-discovery{margin:36px 0 0}.source-verification{color:#8799b8;font-size:11px;text-align:right;line-height:1.5}
+.source-controls{padding:20px;background:#111b30;border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;gap:17px}
+.source-search-label{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:800;color:#aebce0}
+.source-search-label input{background:#070d1c;border:1px solid #566385;border-radius:11px;min-height:54px;padding:12px 17px;color:#f3f5ff;font-size:17px;width:100%}
+.source-search-label input::placeholder{color:#7888a9}
+.source-filters{display:flex;gap:10px;flex-wrap:wrap}
+.source-chip{border:1px solid #414d6a;color:#bac5df;padding:11px 16px;min-height:46px;font-weight:750;font-size:13px;border-radius:999px;background:#1d2740}
+.source-chip.selected,.source-chip:hover{color:#140f32;background:#baafff;border-color:#baafff}
+.source-count{color:#b3bfd8;font-size:12px;margin:22px 0 13px}
+.source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.source-card{display:flex;flex-direction:column;gap:12px;min-width:0;border:1px solid #384361;border-radius:18px;background:linear-gradient(160deg,#1b2340,#101728);padding:22px}
+.source-card-top{display:flex;gap:14px;align-items:center}
+.source-icon{height:52px;width:52px;flex:0 0 52px;display:grid;place-items:center;border-radius:14px;font-size:27px;font-weight:900;background:#5b4c9c4a;border:1px solid #8e7bdd66;color:#e4dafe}
+.source-name{flex:1;min-width:0}.source-name h3{margin:0 0 3px;font-size:21px;letter-spacing:-.02em}.source-name span{display:block;color:#a6abd9;font-size:11px}
+.source-card p{font-size:13px;line-height:1.6;color:#b8c4dd;margin:0}
+.source-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.source-meta span{font-size:11px;color:#bdcae6;background:#26334c;padding:6px 10px;border-radius:9px}
+.source-fav{border:1px solid #5b6682;color:#c1b0fa;background:#1a2440;border-radius:9px;min-height:43px;width:44px;font-size:25px}
+.source-fav[aria-pressed="true"]{color:#f4bcdf}
+.source-open{align-self:stretch;margin-top:5px}
+.source-empty{grid-column:1/-1;padding:28px;border:1px dashed #4e5a79;border-radius:14px;color:#d5dcf1}.source-empty p{color:#a8b5d1}
+button:focus,a:focus,input:focus{outline:3px solid #aef1ff;outline-offset:3px}
+@media(max-width:1060px){.source-grid{grid-template-columns:1fr}.source-verification{display:none}}
