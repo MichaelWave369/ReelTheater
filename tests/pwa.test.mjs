@@ -25,8 +25,8 @@ test("generated icons are valid-sized PNG resources without remote dependencies"
 });
 test("offline cache is strictly scoped to local application shell resources",()=>{
   const sw=readFileSync("sw.js","utf8");
-  assert.match(sw,/reel-theater-shell-v12/);
-  for(const name of ["manifest.webmanifest","src/platform.js","icons/icon-192.png","icons/icon-512.png"])assert.ok(sw.includes(name));
+  assert.match(sw,/reel-theater-shell-v13/);
+  for(const name of ["manifest.webmanifest","src/platform.js","src/jellyfin.js","icons/icon-192.png","icons/icon-512.png"])assert.ok(sw.includes(name));
   assert.match(sw,/url\.origin !== self\.location\.origin/);
   assert.doesNotMatch(sw,/flower\.mp4|watch\.plex\.tv|pluto\.tv|tubitv\.com/);
 });

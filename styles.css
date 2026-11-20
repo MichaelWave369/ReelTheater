@@ -277,3 +277,20 @@ html[data-ui-mode="tv"] .portable-preview-status{font-size:16px}
 html[data-ui-mode="tv"] .media-support-list li{font-size:16px;min-height:57px}
 html[data-ui-mode="tv"] #health-first-frame{font-size:16px}
 @media(max-width:840px){.media-support-list{grid-template-columns:1fr}.media-support-panel{padding:17px}}
+
+
+/* Rung 13: deliberately local MikeyFlix launcher, never embedded media. */
+.jellyfin-setup{margin:18px 0 23px;gap:14px}
+.jellyfin-setup h2{margin:6px 0 4px}
+.jellyfin-setup .portable-label input{
+  display:block;width:100%;min-width:0;margin-top:8px;padding:13px 15px;
+  border-radius:10px;border:1px solid #6e83b4;background:#091326;color:#f0f6ff;
+  font:inherit;overflow-wrap:anywhere
+}
+.jellyfin-setup .portable-label input:focus-visible{outline:3px solid #99ecff;outline-offset:3px}
+.jellyfin-setup .actions{display:flex;flex-wrap:wrap;gap:10px}
+.jellyfin-setup .actions .action{min-height:48px}
+.jellyfin-status{color:#c5e2e6;font-size:14px;line-height:1.5;min-height:1.6em}
+html[data-ui-mode="tv"] .jellyfin-setup .portable-label input{font-size:18px;min-height:56px}
+html[data-ui-mode="tv"] .jellyfin-status{font-size:17px}
+@media(max-width:640px){.jellyfin-setup .actions .action{flex:1 1 100%;width:100%;text-align:center}}

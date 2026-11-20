@@ -137,6 +137,16 @@ This is manual portability, **not** automatic syncing. Physical Xbox and Fire TV
 
 Actual Fire TV Silk, Xbox Edge and mobile hardware validation still matters. We are reducing unnecessary work while keeping honest measurements of what the browser can actually report.
 
+## Rung 13 (v0.13.0) — MikeyFlix local Jellyfin launcher
+
+- **Library → MikeyFlix** connects REEL Theater's home screen to your existing Jellyfin LAN destination through a **user-initiated navigation**.
+- Save only a validated private local network origin on each device (for example \`http://192.168.1.50:8096\`); the server address never enters portable setup exports, public code or telemetry.
+- No credentials, API tokens, automatic server calls, media proxy, embedded player, or falsely claimed playback support.
+- Home now has a **MikeyFlix** shortcut. Fire TV Silk / Xbox browser launch behavior still requires real hardware testing; the official Jellyfin app remains a safe fallback.
+- Same-origin offline-shell caching excludes all Jellyfin media and responses.
+
+[Read Rung 13 setup, limitations and field tests](docs/MIKEYFLIX_LAN_RUNG13.md).
+
 ## Rung 12 (v0.12.0) — Playback Reality Lab
 
 - **Watch → Check browser format hints** asks the browser about MP4/H.264, MP4/HEVC, WebM/VP8, WebM/VP9, MP4/AV1, MP3 and AAC, without fetching any provider or third-party media
@@ -190,7 +200,8 @@ See the [real Xbox Series X field-test checklist](docs/XBOX_FIELD_TEST.md). Brow
 10. **Rung 10:** Portable setup backup/import (merged).
 11. **Rung 11:** Runtime responsiveness and device UI timing (merged).
 12. **Rung 12:** Browser codec hints and first-frame callback observations (this PR).
-13. **Rung 13:** Physical Fire TV/Xbox/mobile playback acceptance and device-specific compatibility fixes.
+13. **Rung 13:** Private MikeyFlix/Jellyfin LAN launcher (implemented); Fire TV/Xbox/mobile acceptance still pending.
+14. **Rung 14 candidate:** Physical media-server browser testing and optional opt-in same-origin local Jellyfin adapter.
 
 ## Rights and scope
 
