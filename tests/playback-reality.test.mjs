@@ -105,6 +105,6 @@ test("browser wiring cancels stale video callbacks and exports no private filena
   assert.match(app,/inspectMediaSupport\(player/);
   assert.match(app,/REEL_PLAYBACK_SESSION_V2/);
   assert.match(html,/player-health-frame/);
-  assert.match(sw,/reel-theater-shell-v12/);
+  assert.match(sw,/reel-theater-shell-v13/);
   assert.match(sw,/src\/media-support\.js/);
 });
