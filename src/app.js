@@ -1,4 +1,5 @@
 import { startArcade } from "./arcade.js";
+import {parseJellyfinServer} from "./jellyfin.js";
 import {SOURCES, SOURCE_CATEGORIES, findSources, parseFavoriteSourceIds} from "./sources.js";
 import {FIELD_KEY,FIELD_GAME_URL,FIELD_STATES,FIELD_TARGETS,parseFieldReport,updateFieldEntry,fieldCounts,fieldMarkup} from "./field.js";
 import {UI_MODES,normalizeMode,resolveMode,platformGuide,isEditableTarget,remoteBackKey} from "./platform.js";
@@ -254,6 +255,7 @@ function home() {
     '<button class="tile" data-action="' + (progress > 0 ? 'resume' : 'demo') + '"><span class="icon">▶</span><h3>' + (progress > 0 ? 'Continue Watching' : 'Try the Player') + '</h3><p>' + (progress > 0 ? 'Resume demo at ' + timestamp(progress) : 'Real HTML5 video, not a fake play button.') + '</p></button>' +
     '<button class="tile" data-action="file"><span class="icon">▤</span><h3>My Media</h3><p>Open a video or audio file you choose.</p></button>' +
     '<button class="tile" data-view="arcade"><span class="icon">✧</span><h3>REEL Arcade</h3><p>Signal Breaker plus a curated library of original browser games.</p></button>' +
+    '<button class="tile" data-view="library"><span class="icon">▣</span><h3>MikeyFlix</h3><p>Launch your private Jellyfin server from the Library.</p></button>' +
     '</section>' +
     '<div class="section-heading"><div><h2>Explore more</h2><p>Thoughtful shortcuts, not twelve layers of menus.</p></div></div>' +
     '<section class="card-grid">' +
@@ -358,9 +360,51 @@ function live() {
     '<div class="section-heading"><div><h2>Next integration</h2><p>Verified channel manifests, clear source labels, and device-tested playback.</p></div></div>' +
     '<div class="status-grid"><div class="status-block"><h3>Provider shortcuts</h3><p>Official destinations are available below. Their streams open in the provider’s own website or app.</p></div><div class="status-block"><h3>EPG / DVR</h3><p>Planned native-capability work; not available in this browser pilot.</p></div></div>' + sourceSection();
 }
+function jellyfinPanel() {
+  return '<section class="setup-card jellyfin-setup" aria-label="Private Jellyfin LAN launcher">' +
+    '<div class="eyebrow">MIKEYFLIX · PERSONAL MEDIA</div><h2>Open your Jellyfin server</h2>' +
+    '<p>Already hosting your collection on a home PC? Save its private network address and launch the existing Jellyfin player. No passwords or video files enter REEL.</p>' +
+    '<label class="portable-label" for="jellyfin-url">Jellyfin LAN address' +
+    '<input id="jellyfin-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="220" placeholder="http://192.168.1.50:8096"></label>' +
+    '<div class="actions"><button type="button" class="action secondary" data-action="jellyfin-save">Save local server</button>' +
+    '<a class="action" id="jellyfin-open" href="#" target="_blank" rel="noopener noreferrer" hidden>Open MikeyFlix ↗</a>' +
+    '<button type="button" class="action ghost" data-action="jellyfin-clear">Forget address</button></div>' +
+    '<p id="jellyfin-status" class="jellyfin-status" role="status" aria-live="polite">No private server address saved.</p>' +
+    '<p class="fineprint">This is a manual LAN launcher, not embedded Jellyfin playback or a connectivity test. On Fire TV, localhost means the Stick, not your PC. Public GitHub Pages cannot safely host your private library or bypass browser LAN restrictions. Use the native Jellyfin app if Silk blocks this link.</p></section>';
+}
+function updateJellyfinPanel() {
+  const input=document.getElementById("jellyfin-url");
+  const link=document.getElementById("jellyfin-open");
+  const status=document.getElementById("jellyfin-status");
+  if (!input || !link || !status) return;
+  const saved=parseJellyfinServer(read("jellyfin-url"));
+  input.value=saved.ok?saved.url:"";
+  link.hidden=!saved.ok;
+  if(saved.ok)link.href=saved.url;
+  else link.removeAttribute("href");
+  status.textContent=saved.ok ?
+    "Saved on this browser. Connection and playback not verified." :
+    "No private server address saved.";
+}
+function saveJellyfinPanel() {
+  const input=document.getElementById("jellyfin-url");
+  const status=document.getElementById("jellyfin-status");
+  if(!input || !status)return;
+  const parsed=parseJellyfinServer(input.value);
+  if(!parsed.ok){status.textContent=parsed.error;return;}
+  if(!save("jellyfin-url",parsed.url)){
+    status.textContent="Browser storage is unavailable. The address was not saved.";
+    return;
+  }
+  updateJellyfinPanel();
+}
+function clearJellyfinPanel() {
+  save("jellyfin-url","");
+  updateJellyfinPanel();
+}
 function library() {
   const isFav = read("favorite-demo") === "yes";
-  return '<div class="page-heading"><div class="eyebrow">YOUR LIBRARY</div><h1>Your stuff. Your space.</h1><p>Nothing gets uploaded. In this browser pilot, open media with the file picker and save a demo favorite locally.</p></div>' +
+  return '<div class="page-heading"><div class="eyebrow">YOUR LIBRARY</div><h1>Your stuff. Your space.</h1><p>Launch your own Jellyfin media server or choose a file on this device. No uploads to REEL.</p></div>' + jellyfinPanel() +
     '<section class="card-grid"><div class="feature-card"><div class="tag">Personal media</div><h3>Open Local File</h3><p>Xbox browser file access is restricted. On a computer, this can play a file you select. For NAS and USB library access on Xbox, a native app or media server integration is a future milestone.</p><button class="action" data-action="file">Choose media</button></div>' +
     '<div class="feature-card"><div class="tag">Saved to this browser</div><h3>Flower Demo</h3><p>' + (isFav ? "Added to your favorites." : "Not in your favorites yet.") + '</p><button class="action secondary" data-action="favorite">' + (isFav ? "♥ Remove favorite" : "♡ Add favorite") + '</button><button class="action ghost" data-action="demo">▷ Play</button></div></section>';
 }
@@ -644,7 +688,7 @@ function settings() {
     '<section class="status-grid"><div class="status-block"><h3>Input</h3><p>'+(gamepad?'Gamepad reported by browser.':'No gamepad currently reported.')+' Keyboard arrows and Enter also work where the browser forwards them.</p></div>' +
     '<div class="status-block"><h3>Connection</h3><p>Browser reports '+(online?'online':'offline')+'. This is not a test of third-party streaming availability.</p></div>' +
     '<div class="status-block"><h3>Offline app shell</h3><p>'+(navigator.serviceWorker?.controller?'Service worker currently controls this page.':'Not currently controlled by a service worker; offline use is not yet confirmed.')+' External videos and providers are never cached.</p></div>' +
-    '<div class="status-block"><h3>Local-only data</h3><p>Demo progress, source favorites, preferred layout and optional Field Lab notes use browser storage. No telemetry or automatic uploads.</p></div></section>' +
+    '<div class="status-block"><h3>Local-only data</h3><p>Demo progress, source favorites, preferred layout, optional Field Lab notes and a manually saved Jellyfin LAN address use browser storage. No telemetry or automatic uploads.</p></div></section>' +
     '<div class="section-heading"><div><h2>Controls & recovery</h2></div></div>' +
     '<div class="info-panel"><p><strong>TV / Fire remote:</strong> D-pad or arrow keys navigate if delivered by the browser; center or Enter selects. Back or Escape returns Home. Some TV browsers use their own cursor instead of key navigation.</p><p><strong>Xbox gamepad:</strong> D-pad or left stick navigates; A selects; B returns Home or closes player. Arcade uses horizontal input.</p><p><strong>Touch:</strong> use bottom navigation, tap cards, scroll naturally, and use on-screen keyboard for search.</p><p><strong>Playback:</strong> Commercial DRM and SMB/USB library browsing still require authorized supported apps or future native/media-server integration.</p><button class="action secondary" data-action="reset">Clear saved demo progress and favorite</button></div>';
 }
@@ -672,6 +716,7 @@ function render() {
     document.querySelectorAll("[data-field-note]").forEach(el=>{el.value = observations[el.dataset.fieldNote]?.note || "";});
   }
   applyMode();
+  updateJellyfinPanel();
   updateConnection();
   renderPlaybackHealth();
   updateDeviceLab();
@@ -835,6 +880,8 @@ document.addEventListener("click", event => {
   }
   const button = event.target.closest("button");
   if (!button) return;
+  if(button.dataset.action==="jellyfin-save"){saveJellyfinPanel();return;}
+  if(button.dataset.action==="jellyfin-clear"){clearJellyfinPanel();return;}
   if(button.dataset.action==="redraw-clear"){
     redrawLog=newRedrawLog();updateRedrawDisplay();notify("Local redraw timings cleared.");return;
   }
